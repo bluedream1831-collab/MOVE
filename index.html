@@ -3,237 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉安檢系統 V3</title>
+    <title>移倉排程安檢系統 V4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .photo-slot { aspect-ratio: 4/3; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-        .photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
-        .damage-active { border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
+        .tab-active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: bold; }
+        .photo-slot { aspect-ratio: 4/3; background: #fff; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
+        .item-card { transition: all 0.2s; }
+        .item-done { opacity: 0.6; background-color: #f1f5f9 !important; border-left: 4px solid #94a3b8 !important; }
     </style>
 </head>
-<body class="bg-gray-100 pb-40">
+<body class="pb-40">
 
-    <!-- 頂部狀態列 -->
-    <header class="bg-indigo-700 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
-        <div>
-            <h1 class="text-lg font-bold">移倉紀錄與安檢</h1>
-            <p id="currentTime" class="text-xs opacity-80"></p>
+    <!-- 頂部控制台 -->
+    <header class="bg-indigo-800 text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-xl font-black">倉庫移倉核心系統</h1>
+            <span id="saveStatus" class="text-[10px] bg-indigo-600 px-2 py-1 rounded">資料已加密儲存</span>
         </div>
-        <button onclick="clearForm()" class="text-xs bg-indigo-500 px-3 py-1 rounded">清除重新填寫</button>
+        <!-- 頁籤切換 -->
+        <div class="flex bg-indigo-900/50 rounded-lg p-1">
+            <button onclick="switchTab('today')" id="tabToday" class="flex-1 py-2 text-sm rounded-md transition tab-active">今日作業</button>
+            <button onclick="switchTab('tomorrow')" id="tabTomorrow" class="flex-1 py-2 text-sm rounded-md transition text-indigo-300">明日預排</button>
+        </div>
     </header>
 
-    <main class="max-w-md mx-auto p-4 space-y-4">
+    <main class="max-w-md mx-auto p-4 space-y-6">
 
-        <!-- 1. 車輛基本資訊與外觀檢查 -->
-        <section class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-gray-200">
-            <h2 class="font-bold text-gray-700 flex items-center">
-                <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">1</span>
-                車輛進場安檢
-            </h2>
-            <div class="grid grid-cols-2 gap-3">
-                <div class="col-span-2">
-                    <input type="text" id="carPlate" placeholder="輸入車牌 (如: ABC-1234)" class="w-full text-xl font-black p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 uppercase">
-                </div>
-                <div class="col-span-2 flex gap-2">
-                    <button id="btnNoDamage" onclick="setDamage(false)" class="flex-1 py-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 border-green-500 text-green-600">
-                        ✅ 外觀無損
-                    </button>
-                    <button id="btnHasDamage" onclick="setDamage(true)" class="flex-1 py-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 border-gray-200 text-gray-400">
-                        ⚠️ 凹箱/損壞
-                    </button>
-                </div>
-                <div id="damageNoteBox" class="col-span-2 hidden">
-                    <textarea id="damageNote" placeholder="請描述損壞位置 (例如: 左後方凹箱)" class="w-full p-2 text-sm border-2 border-red-200 rounded-lg bg-red-50"></textarea>
-                </div>
-            </div>
-            <!-- 車輛外觀照 -->
-            <div class="grid grid-cols-2 gap-2 mt-2">
-                <label class="photo-slot">
-                    <span class="text-xs text-gray-400">📷 拍車頭/車牌</span>
-                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImg(this)">
-                </label>
-                <label class="photo-slot">
-                    <span class="text-xs text-gray-400">📷 拍損壞處(選填)</span>
-                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImg(this)">
-                </label>
-            </div>
-        </section>
-
-        <!-- 2. 商品內容核對 -->
-        <section class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-gray-200">
+        <!-- 1. 車輛安檢與進場 (僅今日顯示) -->
+        <section id="sectionVehicle" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
             <div class="flex justify-between items-center">
-                <h2 class="font-bold text-gray-700 flex items-center">
-                    <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">2</span>
-                    商品移撥清單
-                </h2>
-                <button onclick="addItem()" class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">+ 新增</button>
+                <h2 class="font-bold text-slate-800 flex items-center">🚚 車輛與單據紀錄</h2>
+                <span class="text-xs text-slate-400" id="currentDateDisplay"></span>
             </div>
-            <div id="itemList" class="space-y-3">
-                <!-- 預設一列 -->
+            <input type="text" id="carPlate" placeholder="請輸入出貨車牌" class="w-full text-lg font-bold p-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 uppercase">
+            
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="setDamage(false)" id="btnNoDamage" class="py-2 rounded-lg border-2 border-green-500 text-green-600 font-bold text-sm">✅ 外觀正常</button>
+                <button onclick="setDamage(true)" id="btnHasDamage" class="py-2 rounded-lg border-2 border-slate-200 text-slate-400 font-bold text-sm">⚠️ 有凹箱/損壞</button>
             </div>
-            <div class="bg-indigo-50 p-3 rounded-xl flex justify-around text-sm font-bold text-indigo-800">
-                <span>總數量: <span id="sumQty">0</span></span>
-                <span>總板數: <span id="sumPlt">0</span></span>
+
+            <div class="grid grid-cols-3 gap-2 mt-2">
+                <label class="photo-slot"><span class="text-[10px] text-slate-400">拍車頭</span><input type="file" capture="environment" class="hidden" onchange="previewImg(this)"></label>
+                <label class="photo-slot"><span class="text-[10px] text-slate-400">拍損壞</span><input type="file" capture="environment" class="hidden" onchange="previewImg(this)"></label>
+                <label class="photo-slot"><span class="text-[10px] text-slate-400">拍簽單</span><input type="file" capture="environment" class="hidden" onchange="previewImg(this)"></label>
             </div>
         </section>
 
-        <!-- 3. 離場單據與拍照 -->
-        <section class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-gray-200">
-            <h2 class="font-bold text-gray-700 flex items-center">
-                <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">3</span>
-                單據拍照回傳
-            </h2>
-            <p class="text-xs text-red-500">※ 離場前請務必拍攝簽收單據</p>
-            <div class="grid grid-cols-1 gap-2">
-                <label class="photo-slot" style="aspect-ratio: 16/9;">
-                    <span class="text-xl">📷 拍攝離場單據 (簽單)</span>
-                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImg(this)">
-                </label>
+        <!-- 2. 商品清單管理 -->
+        <section class="space-y-3">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="font-bold text-slate-800" id="listTitle">今日移撥明細</h2>
+                    <p class="text-xs text-slate-500">進度: <span id="progressText">0/0</span></p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="addItem()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm">+ 新增品項</button>
+                </div>
+            </div>
+
+            <!-- 清單容器 -->
+            <div id="itemList" class="space-y-3">
+                <!-- 項目將由 JS 動態產生 -->
             </div>
         </section>
 
     </main>
 
-    <!-- 固定底部操作 -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.1)] z-50 max-w-md mx-auto border-t">
+    <!-- 底部動作條 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md p-4 shadow-[0_-10px_25px_rgba(0,0,0,0.1)] z-50 max-w-md mx-auto border-t border-slate-100">
+        <div class="flex justify-between items-center mb-3">
+            <div class="text-xs">
+                今日合計: <b class="text-indigo-600 text-sm" id="sumQty">0</b> 件 / <b class="text-green-600 text-sm" id="sumPlt">0</b> 板
+            </div>
+            <button onclick="resetData()" class="text-slate-400 text-xs underline">重置所有資料</button>
+        </div>
         <div class="flex gap-3">
-            <button onclick="shareToLine()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold flex justify-center items-center gap-2 active:scale-95 transition">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 10.3c0-4.3-4.1-7.8-9.2-7.8s-9.2 3.5-9.2 7.8c0 3.9 3.2 7.1 7.6 7.7.3.1.7.2.8.5l.3 1.8c.1.4.3.5.5.5s.4-.2.4-.4c0 0 0 0 0 0l-.1-.5s-.4-2.3-.5-2.6c1.6-.3 3.1-1 4.3-2 3-2.3 5.1-5.1 5.1-7.5z"/></svg>
-                傳送報表與照片
+            <button onclick="shareReport()" class="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-bold flex justify-center items-center gap-2 shadow-lg active:scale-95 transition">
+                🚀 完成並傳送園區報表
             </button>
-            <button onclick="downloadCSV()" class="bg-gray-800 text-white px-4 py-4 rounded-2xl font-bold active:scale-95 transition">
-                💾 存檔
+            <button onclick="exportCSV()" class="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-2xl font-bold text-sm shadow-sm active:scale-95 transition">
+                Excel存檔
             </button>
         </div>
     </div>
 
     <script>
-        let hasDamage = false;
+        let currentTab = 'today';
+        let data = {
+            today: [],
+            tomorrow: []
+        };
+        let carStatus = { plate: '', hasDamage: false, damageNote: '' };
 
-        // 設定日期時間
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('currentTime').innerText = now.toLocaleString();
-        }, 1000);
+        // 初始化
+        window.onload = () => {
+            const saved = localStorage.getItem('warehouse_v4_data');
+            if (saved) data = JSON.parse(saved);
+            
+            const savedCar = localStorage.getItem('warehouse_v4_car');
+            if (savedCar) {
+                carStatus = JSON.parse(savedCar);
+                document.getElementById('carPlate').value = carStatus.plate;
+                setDamage(carStatus.hasDamage);
+            }
 
-        // 損壞檢查切換
-        function setDamage(status) {
-            hasDamage = status;
-            const btnNo = document.getElementById('btnNoDamage');
-            const btnHas = document.getElementById('btnHasDamage');
-            const note = document.getElementById('damageNoteBox');
+            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString();
+            renderList();
+        };
 
-            if(status) {
-                btnHas.className = "flex-1 py-3 rounded-xl border-2 font-bold damage-active transition flex items-center justify-center gap-2";
-                btnNo.className = "flex-1 py-3 rounded-xl border-2 font-bold border-gray-200 text-gray-400 transition flex items-center justify-center gap-2";
-                note.classList.remove('hidden');
-            } else {
-                btnNo.className = "flex-1 py-3 rounded-xl border-2 font-bold border-green-500 text-green-600 transition flex items-center justify-center gap-2";
-                btnHas.className = "flex-1 py-3 rounded-xl border-2 font-bold border-gray-200 text-gray-400 transition flex items-center justify-center gap-2";
-                note.classList.add('hidden');
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabToday').className = tab === 'today' ? 'flex-1 py-2 text-sm rounded-md transition tab-active bg-white text-indigo-700 shadow-sm' : 'flex-1 py-2 text-sm rounded-md transition text-indigo-200';
+            document.getElementById('tabTomorrow').className = tab === 'tomorrow' ? 'flex-1 py-2 text-sm rounded-md transition tab-active bg-white text-indigo-700 shadow-sm' : 'flex-1 py-2 text-sm rounded-md transition text-indigo-200';
+            
+            document.getElementById('listTitle').innerText = tab === 'today' ? '今日移撥明細' : '明日預排明細';
+            document.getElementById('sectionVehicle').style.display = tab === 'today' ? 'block' : 'none';
+            renderList();
+        }
+
+        function renderList() {
+            const list = document.getElementById('itemList');
+            list.innerHTML = '';
+            const items = data[currentTab];
+
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `item-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative ${item.done ? 'item-done' : ''}`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <input type="text" value="${item.name}" onchange="updateItem(${index}, 'name', this.value)" placeholder="品名 / ITEM" class="w-full font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-indigo-300 focus:outline-none">
+                            <div class="flex gap-2 mt-1">
+                                <input type="text" value="${item.loc}" onchange="updateItem(${index}, 'loc', this.value)" placeholder="儲位" class="text-[10px] w-16 p-1 bg-slate-100 rounded">
+                                <input type="text" value="${item.exp}" onchange="updateItem(${index}, 'exp', this.value)" placeholder="有效期" class="text-[10px] w-24 p-1 bg-slate-100 rounded font-mono text-blue-600">
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] text-slate-400">移撥</span>
+                                <input type="number" value="${item.qty}" onchange="updateItem(${index}, 'qty', this.value)" class="w-14 text-center font-bold text-indigo-600 border rounded">
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] text-slate-400">板數</span>
+                                <input type="number" value="${item.plt}" onchange="updateItem(${index}, 'plt', this.value)" class="w-14 text-center font-bold text-green-600 border rounded">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-50">
+                        <label class="flex items-center gap-2 text-xs text-slate-500">
+                            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleDone(${index})" class="w-4 h-4 rounded"> ${item.done ? '已完成' : '核對中'}
+                        </label>
+                        <div class="flex gap-2">
+                            <button onclick="moveTask(${index})" class="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold">
+                                ➔ 移至${currentTab === 'today' ? '明日' : '今日'}
+                            </button>
+                            <button onclick="removeItem(${index})" class="text-red-400 p-1">✕</button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            calcTotals();
+            saveToLocal();
+        }
+
+        // 核心邏輯功能
+        function addItem() {
+            data[currentTab].unshift({ name: '', loc: '', exp: '', qty: 0, plt: 1, done: false });
+            renderList();
+        }
+
+        function updateItem(index, field, value) {
+            data[currentTab][index][field] = value;
+            saveToLocal();
+            calcTotals();
+        }
+
+        function toggleDone(index) {
+            data[currentTab][index].done = !data[currentTab][index].done;
+            renderList();
+        }
+
+        function moveTask(index) {
+            const target = currentTab === 'today' ? 'tomorrow' : 'today';
+            const item = data[currentTab].splice(index, 1)[0];
+            data[target].push(item);
+            renderList();
+        }
+
+        function removeItem(index) {
+            if(confirm('確定刪除？')) {
+                data[currentTab].splice(index, 1);
+                renderList();
             }
         }
 
-        // 新增商品行
-        function addItem() {
-            const container = document.getElementById('itemList');
-            const div = document.createElement('div');
-            div.className = "bg-gray-50 p-3 rounded-xl border border-gray-100 relative";
-            div.innerHTML = `
-                <input type="text" placeholder="品名/ITEM編號" class="w-full bg-transparent font-bold border-b mb-2 focus:outline-none focus:border-indigo-500 item-name">
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div class="flex items-center gap-1">
-                        <span class="text-gray-400 text-xs">數量</span>
-                        <input type="number" oninput="calcTotal()" value="0" class="w-full bg-white border rounded p-1 text-center font-bold text-blue-600 item-qty">
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <span class="text-gray-400 text-xs">板數</span>
-                        <input type="number" oninput="calcTotal()" value="1" class="w-full bg-white border rounded p-1 text-center font-bold text-green-600 item-plt">
-                    </div>
-                </div>
-                <button onclick="this.parentElement.remove();calcTotal();" class="absolute -top-2 -right-2 bg-gray-300 text-white rounded-full w-5 h-5 text-xs">✕</button>
-            `;
-            container.appendChild(div);
-            calcTotal();
+        function setDamage(status) {
+            carStatus.hasDamage = status;
+            document.getElementById('btnNoDamage').className = status ? "py-2 rounded-lg border-2 border-slate-200 text-slate-400 font-bold text-sm" : "py-2 rounded-lg border-2 border-green-500 text-green-600 font-bold text-sm";
+            document.getElementById('btnHasDamage').className = status ? "py-2 rounded-lg border-2 border-red-500 text-red-600 font-bold text-sm bg-red-50" : "py-2 rounded-lg border-2 border-slate-200 text-slate-400 font-bold text-sm";
+            saveToLocal();
         }
 
-        // 計算總計
-        function calcTotal() {
-            let q = 0, p = 0;
-            document.querySelectorAll('.item-qty').forEach(i => q += Number(i.value));
-            document.querySelectorAll('.item-plt').forEach(i => p += Number(i.value));
-            document.getElementById('sumQty').innerText = q;
-            document.getElementById('sumPlt').innerText = p;
-        }
-
-        // 照片預覽
         function previewImg(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    let img = input.parentElement.querySelector('img');
-                    if(!img) {
-                        img = document.createElement('img');
-                        input.parentElement.appendChild(img);
-                    }
+                reader.onload = e => {
+                    let img = input.parentElement.querySelector('img') || document.createElement('img');
                     img.src = e.target.result;
-                }
+                    input.parentElement.appendChild(img);
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
-        // 清除表單
-        function clearForm() {
-            if(confirm('確定清除所有內容並重新開始嗎？')) {
+        function calcTotals() {
+            const items = data.today;
+            let q = 0, p = 0, d = 0;
+            items.forEach(i => {
+                q += Number(i.qty);
+                p += Number(i.plt);
+                if(i.done) d++;
+            });
+            document.getElementById('sumQty').innerText = q;
+            document.getElementById('sumPlt').innerText = p;
+            document.getElementById('progressText').innerText = `${d}/${items.length}`;
+        }
+
+        function saveToLocal() {
+            localStorage.setItem('warehouse_v4_data', JSON.stringify(data));
+            carStatus.plate = document.getElementById('carPlate').value;
+            localStorage.setItem('warehouse_v4_car', JSON.stringify(carStatus));
+        }
+
+        function resetData() {
+            if(confirm('注意！這將清空所有今日與明日的紀錄，確定嗎？')) {
+                localStorage.clear();
                 location.reload();
             }
         }
 
-        // 傳送分享 (模擬傳送回園區)
-        async function shareToLine() {
+        async function shareReport() {
             const plate = document.getElementById('carPlate').value;
-            if(!plate) { alert('請輸入車牌'); return; }
-
-            const msg = `【移倉離場回報】\n車牌: ${plate}\n外觀狀況: ${hasDamage ? '⚠️有損壞('+document.getElementById('damageNote').value+')' : '✅正常'}\n總數量: ${document.getElementById('sumQty').innerText}\n總板數: ${document.getElementById('sumPlt').innerText}\n時間: ${new Date().toLocaleString()}\n(單據照片已拍照存檔)`;
+            if(!plate) { alert('請填寫車牌再回報！'); return; }
+            
+            const msg = `【移倉離場回報】\n日期: ${new Date().toLocaleDateString()}\n車牌: ${plate}\n外觀: ${carStatus.hasDamage ? '⚠️損壞' : '✅正常'}\n----------------\n今日移撥總計: ${document.getElementById('sumQty').innerText} 件 / ${document.getElementById('sumPlt').innerText} 板\n進度: ${document.getElementById('progressText').innerText}\n明日待辦: ${data.tomorrow.length} 項\n\n(單據與車體照片已記錄)`;
 
             if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: '移倉紀錄回報',
-                        text: msg
-                    });
-                } catch (err) {
-                    console.log('Share failed');
-                }
+                await navigator.share({ title: '移倉報表', text: msg });
             } else {
-                // 不支援分享 API 則複製到剪貼簿
                 navigator.clipboard.writeText(msg);
-                alert('已複製報表文字，請貼上到 LINE 群組，並記得手動傳送單據照片。');
+                alert('報表內容已複製，請貼上到 LINE 並手動傳送照片。');
             }
         }
 
-        function downloadCSV() {
-            // 簡易下載 CSV 邏輯
-            const plate = document.getElementById('carPlate').value;
-            let csv = "\ufeff車牌," + plate + ",外觀狀況," + (hasDamage ? "損壞" : "正常") + "\n";
-            csv += "品名,數量,板數\n";
-            document.querySelectorAll('#itemList > div').forEach(row => {
-                const n = row.querySelector('.item-name').value;
-                const q = row.querySelector('.item-qty').value;
-                const p = row.querySelector('.item-plt').value;
-                csv += `${n},${q},${p}\n`;
+        function exportCSV() {
+            let csv = "\ufeff頁籤,儲位,ITEM/品名,數量,板數,有效日期,狀態\n";
+            ['today', 'tomorrow'].forEach(tab => {
+                data[tab].forEach(i => {
+                    csv += `${tab === 'today' ? '今日' : '明日'},${i.loc},${i.name},${i.qty},${i.plt},${i.exp},${i.done ? '完成' : '待辦'}\n`;
+                });
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `移倉_${plate}.csv`;
+            link.download = `移倉紀錄_全_${new Date().getTime()}.csv`;
             link.click();
         }
-
-        // 初始化一行
-        addItem();
     </script>
 </body>
 </html>
