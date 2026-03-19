@@ -2,132 +2,238 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>倉庫移倉作業紀錄系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>移倉安檢系統 V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .photo-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .photo-slot { aspect-ratio: 4/3; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        .damage-active { border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 pb-40">
 
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg pb-20">
-        <!-- Header -->
-        <header class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md">
-            <h1 class="text-xl font-bold text-center">倉庫移倉紀錄表</h1>
-        </header>
+    <!-- 頂部狀態列 -->
+    <header class="bg-indigo-700 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold">移倉紀錄與安檢</h1>
+            <p id="currentTime" class="text-xs opacity-80"></p>
+        </div>
+        <button onclick="clearForm()" class="text-xs bg-indigo-500 px-3 py-1 rounded">清除重新填寫</button>
+    </header>
 
-        <main class="p-4 space-y-6">
-            <!-- 1. 基本資訊 -->
-            <section class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h2 class="font-bold mb-2 text-blue-800">1. 基本資訊</h2>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-sm">出貨車牌號碼</label>
-                        <input type="text" id="carNumber" placeholder="例如: ABC-1234" class="w-full p-2 border rounded border-gray-300 uppercase focus:ring-2 focus:ring-blue-400">
-                    </div>
-                    <div>
-                        <label class="block text-sm">作業人員</label>
-                        <input type="text" id="workerName" placeholder="請輸入姓名" class="w-full p-2 border rounded border-gray-300">
-                    </div>
+    <main class="max-w-md mx-auto p-4 space-y-4">
+
+        <!-- 1. 車輛基本資訊與外觀檢查 -->
+        <section class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-gray-200">
+            <h2 class="font-bold text-gray-700 flex items-center">
+                <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                車輛進場安檢
+            </h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-2">
+                    <input type="text" id="carPlate" placeholder="輸入車牌 (如: ABC-1234)" class="w-full text-xl font-black p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 uppercase">
                 </div>
-            </section>
-
-            <!-- 2. 商品內容 -->
-            <section class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="font-bold text-gray-700">2. 商品及數量核對</h2>
-                    <button onclick="addItemRow()" class="bg-green-600 text-white px-3 py-1 rounded-full text-sm">+ 新增品項</button>
+                <div class="col-span-2 flex gap-2">
+                    <button id="btnNoDamage" onclick="setDamage(false)" class="flex-1 py-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 border-green-500 text-green-600">
+                        ✅ 外觀無損
+                    </button>
+                    <button id="btnHasDamage" onclick="setDamage(true)" class="flex-1 py-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2 border-gray-200 text-gray-400">
+                        ⚠️ 凹箱/損壞
+                    </button>
                 </div>
-
-                <div id="itemList" class="space-y-3">
-                    <!-- 商品列範例 -->
-                    <div class="item-row p-3 border rounded-lg bg-gray-50 relative shadow-sm">
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="text" placeholder="ITEM / 品名" class="col-span-2 p-2 border rounded bg-white item-name">
-                            <input type="number" placeholder="移撥數" class="p-2 border rounded item-qty">
-                            <input type="text" placeholder="有效日期(YYYYMMDD)" class="p-2 border rounded item-date">
-                        </div>
-                        <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs shadow">X</button>
-                    </div>
+                <div id="damageNoteBox" class="col-span-2 hidden">
+                    <textarea id="damageNote" placeholder="請描述損壞位置 (例如: 左後方凹箱)" class="w-full p-2 text-sm border-2 border-red-200 rounded-lg bg-red-50"></textarea>
                 </div>
-            </section>
+            </div>
+            <!-- 車輛外觀照 -->
+            <div class="grid grid-cols-2 gap-2 mt-2">
+                <label class="photo-slot">
+                    <span class="text-xs text-gray-400">📷 拍車頭/車牌</span>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImg(this)">
+                </label>
+                <label class="photo-slot">
+                    <span class="text-xs text-gray-400">📷 拍損壞處(選填)</span>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImg(this)">
+                </label>
+            </div>
+        </section>
 
-            <!-- 3. 拍照記錄 -->
-            <section class="space-y-4">
-                <h2 class="font-bold text-gray-700">3. 拍照記錄 (出貨狀況)</h2>
-                <div class="flex flex-wrap gap-2" id="photoContainer">
-                    <label class="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <span class="text-3xl text-gray-400">+</span>
-                        <span class="text-xs text-gray-400">拍照</span>
-                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this)">
-                    </label>
-                </div>
-            </section>
-        </main>
+        <!-- 2. 商品內容核對 -->
+        <section class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-gray-700 flex items-center">
+                    <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">2</span>
+                    商品移撥清單
+                </h2>
+                <button onclick="addItem()" class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">+ 新增</button>
+            </div>
+            <div id="itemList" class="space-y-3">
+                <!-- 預設一列 -->
+            </div>
+            <div class="bg-indigo-50 p-3 rounded-xl flex justify-around text-sm font-bold text-indigo-800">
+                <span>總數量: <span id="sumQty">0</span></span>
+                <span>總板數: <span id="sumPlt">0</span></span>
+            </div>
+        </section>
 
-        <!-- Footer Actions -->
-        <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white p-3 border-t flex gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
-            <button onclick="exportData()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold active:bg-blue-700 transition">完成並導出</button>
-            <button onclick="location.reload()" class="bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-bold">重置</button>
-        </footer>
+        <!-- 3. 離場單據與拍照 -->
+        <section class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-gray-200">
+            <h2 class="font-bold text-gray-700 flex items-center">
+                <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">3</span>
+                單據拍照回傳
+            </h2>
+            <p class="text-xs text-red-500">※ 離場前請務必拍攝簽收單據</p>
+            <div class="grid grid-cols-1 gap-2">
+                <label class="photo-slot" style="aspect-ratio: 16/9;">
+                    <span class="text-xl">📷 拍攝離場單據 (簽單)</span>
+                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImg(this)">
+                </label>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 固定底部操作 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.1)] z-50 max-w-md mx-auto border-t">
+        <div class="flex gap-3">
+            <button onclick="shareToLine()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold flex justify-center items-center gap-2 active:scale-95 transition">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 10.3c0-4.3-4.1-7.8-9.2-7.8s-9.2 3.5-9.2 7.8c0 3.9 3.2 7.1 7.6 7.7.3.1.7.2.8.5l.3 1.8c.1.4.3.5.5.5s.4-.2.4-.4c0 0 0 0 0 0l-.1-.5s-.4-2.3-.5-2.6c1.6-.3 3.1-1 4.3-2 3-2.3 5.1-5.1 5.1-7.5z"/></svg>
+                傳送報表與照片
+            </button>
+            <button onclick="downloadCSV()" class="bg-gray-800 text-white px-4 py-4 rounded-2xl font-bold active:scale-95 transition">
+                💾 存檔
+            </button>
+        </div>
     </div>
 
     <script>
-        // 新增品項欄位
-        function addItemRow() {
-            const list = document.getElementById('itemList');
-            const div = document.createElement('div');
-            div.className = 'item-row p-3 border rounded-lg bg-gray-50 relative shadow-sm animate-fade-in';
-            div.innerHTML = `
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" placeholder="ITEM / 品名" class="col-span-2 p-2 border rounded bg-white item-name">
-                    <input type="number" placeholder="移撥數" class="p-2 border rounded item-qty">
-                    <input type="text" placeholder="有效日期(YYYYMMDD)" class="p-2 border rounded item-date">
-                </div>
-                <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs shadow">X</button>
-            `;
-            list.appendChild(div);
+        let hasDamage = false;
+
+        // 設定日期時間
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('currentTime').innerText = now.toLocaleString();
+        }, 1000);
+
+        // 損壞檢查切換
+        function setDamage(status) {
+            hasDamage = status;
+            const btnNo = document.getElementById('btnNoDamage');
+            const btnHas = document.getElementById('btnHasDamage');
+            const note = document.getElementById('damageNoteBox');
+
+            if(status) {
+                btnHas.className = "flex-1 py-3 rounded-xl border-2 font-bold damage-active transition flex items-center justify-center gap-2";
+                btnNo.className = "flex-1 py-3 rounded-xl border-2 font-bold border-gray-200 text-gray-400 transition flex items-center justify-center gap-2";
+                note.classList.remove('hidden');
+            } else {
+                btnNo.className = "flex-1 py-3 rounded-xl border-2 font-bold border-green-500 text-green-600 transition flex items-center justify-center gap-2";
+                btnHas.className = "flex-1 py-3 rounded-xl border-2 font-bold border-gray-200 text-gray-400 transition flex items-center justify-center gap-2";
+                note.classList.add('hidden');
+            }
         }
 
-        // 處理照片預覽
-        function handlePhoto(input) {
+        // 新增商品行
+        function addItem() {
+            const container = document.getElementById('itemList');
+            const div = document.createElement('div');
+            div.className = "bg-gray-50 p-3 rounded-xl border border-gray-100 relative";
+            div.innerHTML = `
+                <input type="text" placeholder="品名/ITEM編號" class="w-full bg-transparent font-bold border-b mb-2 focus:outline-none focus:border-indigo-500 item-name">
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="flex items-center gap-1">
+                        <span class="text-gray-400 text-xs">數量</span>
+                        <input type="number" oninput="calcTotal()" value="0" class="w-full bg-white border rounded p-1 text-center font-bold text-blue-600 item-qty">
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-gray-400 text-xs">板數</span>
+                        <input type="number" oninput="calcTotal()" value="1" class="w-full bg-white border rounded p-1 text-center font-bold text-green-600 item-plt">
+                    </div>
+                </div>
+                <button onclick="this.parentElement.remove();calcTotal();" class="absolute -top-2 -right-2 bg-gray-300 text-white rounded-full w-5 h-5 text-xs">✕</button>
+            `;
+            container.appendChild(div);
+            calcTotal();
+        }
+
+        // 計算總計
+        function calcTotal() {
+            let q = 0, p = 0;
+            document.querySelectorAll('.item-qty').forEach(i => q += Number(i.value));
+            document.querySelectorAll('.item-plt').forEach(i => p += Number(i.value));
+            document.getElementById('sumQty').innerText = q;
+            document.getElementById('sumPlt').innerText = p;
+        }
+
+        // 照片預覽
+        function previewImg(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const img = document.createElement('img');
+                    let img = input.parentElement.querySelector('img');
+                    if(!img) {
+                        img = document.createElement('img');
+                        input.parentElement.appendChild(img);
+                    }
                     img.src = e.target.result;
-                    img.className = 'photo-preview border-2 border-white shadow-sm';
-                    document.getElementById('photoContainer').prepend(img);
                 }
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
-        // 導出資料 (簡單 CSV 格式)
-        function exportData() {
-            const car = document.getElementById('carNumber').value;
-            const worker = document.getElementById('workerName').value;
-            if(!car) { alert('請輸入車牌！'); return; }
-
-            let content = `車牌號碼: ${car}\n作業人: ${worker}\n作業時間: ${new Date().toLocaleString()}\n\n品名,數量,有效日期\n`;
-            
-            document.querySelectorAll('.item-row').forEach(row => {
-                const name = row.querySelector('.item-name').value;
-                const qty = row.querySelector('.item-qty').value;
-                const date = row.querySelector('.item-date').value;
-                if(name) content += `${name},${qty},${date}\n`;
-            });
-
-            // 模擬匯出成檔案
-            const blob = new Blob(["\ufeff" + content], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `移倉紀錄_${car}_${new Date().getTime()}.csv`;
-            link.click();
-            
-            alert('紀錄已完成匯出！請記得將照片另外存檔。');
+        // 清除表單
+        function clearForm() {
+            if(confirm('確定清除所有內容並重新開始嗎？')) {
+                location.reload();
+            }
         }
+
+        // 傳送分享 (模擬傳送回園區)
+        async function shareToLine() {
+            const plate = document.getElementById('carPlate').value;
+            if(!plate) { alert('請輸入車牌'); return; }
+
+            const msg = `【移倉離場回報】\n車牌: ${plate}\n外觀狀況: ${hasDamage ? '⚠️有損壞('+document.getElementById('damageNote').value+')' : '✅正常'}\n總數量: ${document.getElementById('sumQty').innerText}\n總板數: ${document.getElementById('sumPlt').innerText}\n時間: ${new Date().toLocaleString()}\n(單據照片已拍照存檔)`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '移倉紀錄回報',
+                        text: msg
+                    });
+                } catch (err) {
+                    console.log('Share failed');
+                }
+            } else {
+                // 不支援分享 API 則複製到剪貼簿
+                navigator.clipboard.writeText(msg);
+                alert('已複製報表文字，請貼上到 LINE 群組，並記得手動傳送單據照片。');
+            }
+        }
+
+        function downloadCSV() {
+            // 簡易下載 CSV 邏輯
+            const plate = document.getElementById('carPlate').value;
+            let csv = "\ufeff車牌," + plate + ",外觀狀況," + (hasDamage ? "損壞" : "正常") + "\n";
+            csv += "品名,數量,板數\n";
+            document.querySelectorAll('#itemList > div').forEach(row => {
+                const n = row.querySelector('.item-name').value;
+                const q = row.querySelector('.item-qty').value;
+                const p = row.querySelector('.item-plt').value;
+                csv += `${n},${q},${p}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `移倉_${plate}.csv`;
+            link.click();
+        }
+
+        // 初始化一行
+        addItem();
     </script>
 </body>
 </html>
