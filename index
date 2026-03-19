@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倉庫移倉作業紀錄系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .photo-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg pb-20">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md">
+            <h1 class="text-xl font-bold text-center">倉庫移倉紀錄表</h1>
+        </header>
+
+        <main class="p-4 space-y-6">
+            <!-- 1. 基本資訊 -->
+            <section class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h2 class="font-bold mb-2 text-blue-800">1. 基本資訊</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm">出貨車牌號碼</label>
+                        <input type="text" id="carNumber" placeholder="例如: ABC-1234" class="w-full p-2 border rounded border-gray-300 uppercase focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm">作業人員</label>
+                        <input type="text" id="workerName" placeholder="請輸入姓名" class="w-full p-2 border rounded border-gray-300">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 商品內容 -->
+            <section class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-gray-700">2. 商品及數量核對</h2>
+                    <button onclick="addItemRow()" class="bg-green-600 text-white px-3 py-1 rounded-full text-sm">+ 新增品項</button>
+                </div>
+
+                <div id="itemList" class="space-y-3">
+                    <!-- 商品列範例 -->
+                    <div class="item-row p-3 border rounded-lg bg-gray-50 relative shadow-sm">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" placeholder="ITEM / 品名" class="col-span-2 p-2 border rounded bg-white item-name">
+                            <input type="number" placeholder="移撥數" class="p-2 border rounded item-qty">
+                            <input type="text" placeholder="有效日期(YYYYMMDD)" class="p-2 border rounded item-date">
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs shadow">X</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. 拍照記錄 -->
+            <section class="space-y-4">
+                <h2 class="font-bold text-gray-700">3. 拍照記錄 (出貨狀況)</h2>
+                <div class="flex flex-wrap gap-2" id="photoContainer">
+                    <label class="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <span class="text-3xl text-gray-400">+</span>
+                        <span class="text-xs text-gray-400">拍照</span>
+                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(this)">
+                    </label>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer Actions -->
+        <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white p-3 border-t flex gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
+            <button onclick="exportData()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold active:bg-blue-700 transition">完成並導出</button>
+            <button onclick="location.reload()" class="bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-bold">重置</button>
+        </footer>
+    </div>
+
+    <script>
+        // 新增品項欄位
+        function addItemRow() {
+            const list = document.getElementById('itemList');
+            const div = document.createElement('div');
+            div.className = 'item-row p-3 border rounded-lg bg-gray-50 relative shadow-sm animate-fade-in';
+            div.innerHTML = `
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" placeholder="ITEM / 品名" class="col-span-2 p-2 border rounded bg-white item-name">
+                    <input type="number" placeholder="移撥數" class="p-2 border rounded item-qty">
+                    <input type="text" placeholder="有效日期(YYYYMMDD)" class="p-2 border rounded item-date">
+                </div>
+                <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs shadow">X</button>
+            `;
+            list.appendChild(div);
+        }
+
+        // 處理照片預覽
+        function handlePhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'photo-preview border-2 border-white shadow-sm';
+                    document.getElementById('photoContainer').prepend(img);
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // 導出資料 (簡單 CSV 格式)
+        function exportData() {
+            const car = document.getElementById('carNumber').value;
+            const worker = document.getElementById('workerName').value;
+            if(!car) { alert('請輸入車牌！'); return; }
+
+            let content = `車牌號碼: ${car}\n作業人: ${worker}\n作業時間: ${new Date().toLocaleString()}\n\n品名,數量,有效日期\n`;
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value;
+                const qty = row.querySelector('.item-qty').value;
+                const date = row.querySelector('.item-date').value;
+                if(name) content += `${name},${qty},${date}\n`;
+            });
+
+            // 模擬匯出成檔案
+            const blob = new Blob(["\ufeff" + content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `移倉紀錄_${car}_${new Date().getTime()}.csv`;
+            link.click();
+            
+            alert('紀錄已完成匯出！請記得將照片另外存檔。');
+        }
+    </script>
+</body>
+</html>
