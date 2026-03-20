@@ -3,210 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉排程安檢系統 V4</title>
+    <title>移倉系統 V6 - 每板換算版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
-        .tab-active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: bold; }
-        .photo-slot { aspect-ratio: 4/3; background: #fff; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .item-card { border-left: 6px solid #6366f1; transition: all 0.2s; }
+        .item-done { opacity: 0.6; border-left-color: #94a3b8 !important; background-color: #f1f5f9 !important; }
+        .photo-slot { aspect-ratio: 4/3; background: #fff; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-        .item-card { transition: all 0.2s; }
-        .item-done { opacity: 0.6; background-color: #f1f5f9 !important; border-left: 4px solid #94a3b8 !important; }
+        input[type="number"] { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="pb-40">
+<body class="pb-44 text-slate-800">
 
-    <!-- 頂部控制台 -->
-    <header class="bg-indigo-800 text-white p-4 sticky top-0 z-50 shadow-lg">
-        <div class="flex justify-between items-center mb-2">
-            <h1 class="text-xl font-black">倉庫移倉核心系統</h1>
-            <span id="saveStatus" class="text-[10px] bg-indigo-600 px-2 py-1 rounded">資料已加密儲存</span>
+    <header class="bg-indigo-900 text-white p-4 sticky top-0 z-50 shadow-xl">
+        <div class="flex justify-between items-center mb-3">
+            <div>
+                <h1 class="text-xl font-black tracking-tighter">移倉安檢管理系統</h1>
+                <p id="saveStatus" class="text-[10px] text-indigo-300 font-bold">自動儲存中...</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] opacity-60">今日作業日期</p>
+                <p id="todayDate" class="text-xs font-bold"></p>
+            </div>
         </div>
-        <!-- 頁籤切換 -->
-        <div class="flex bg-indigo-900/50 rounded-lg p-1">
-            <button onclick="switchTab('today')" id="tabToday" class="flex-1 py-2 text-sm rounded-md transition tab-active">今日作業</button>
-            <button onclick="switchTab('tomorrow')" id="tabTomorrow" class="flex-1 py-2 text-sm rounded-md transition text-indigo-300">明日預排</button>
+        <div class="flex bg-white/10 rounded-xl p-1 gap-1">
+            <button onclick="switchTab('today')" id="tabToday" class="flex-1 py-2 text-sm rounded-lg transition font-bold bg-white text-indigo-900 shadow-inner">今日作業</button>
+            <button onclick="switchTab('tomorrow')" id="tabTomorrow" class="flex-1 py-2 text-sm rounded-lg transition font-bold text-indigo-200">明日預排</button>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 space-y-6">
 
-        <!-- 1. 車輛安檢與進場 (僅今日顯示) -->
-        <section id="sectionVehicle" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-            <div class="flex justify-between items-center">
-                <h2 class="font-bold text-slate-800 flex items-center">🚚 車輛與單據紀錄</h2>
-                <span class="text-xs text-slate-400" id="currentDateDisplay"></span>
-            </div>
-            <input type="text" id="carPlate" placeholder="請輸入出貨車牌" class="w-full text-lg font-bold p-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 uppercase">
+        <!-- Step 1: 車輛安檢 -->
+        <section id="sectionVehicle" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 space-y-4">
+            <h2 class="font-black text-xs text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> 1. 車輛安檢紀錄
+            </h2>
+            <input type="text" id="carPlate" placeholder="輸入出貨車牌" class="w-full text-2xl font-black p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:outline-none uppercase tracking-widest">
             
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="setDamage(false)" id="btnNoDamage" class="py-2 rounded-lg border-2 border-green-500 text-green-600 font-bold text-sm">✅ 外觀正常</button>
-                <button onclick="setDamage(true)" id="btnHasDamage" class="py-2 rounded-lg border-2 border-slate-200 text-slate-400 font-bold text-sm">⚠️ 有凹箱/損壞</button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="setDamage(false)" id="btnNoDamage" class="py-4 rounded-2xl border-2 border-emerald-500 text-emerald-600 font-black text-sm bg-emerald-50/50">✅ 外觀正常</button>
+                <button onclick="setDamage(true)" id="btnHasDamage" class="py-4 rounded-2xl border-2 border-slate-100 text-slate-300 font-black text-sm">⚠️ 有凹箱損壞</button>
             </div>
 
-            <div class="grid grid-cols-3 gap-2 mt-2">
-                <label class="photo-slot"><span class="text-[10px] text-slate-400">拍車頭</span><input type="file" capture="environment" class="hidden" onchange="previewImg(this)"></label>
-                <label class="photo-slot"><span class="text-[10px] text-slate-400">拍損壞</span><input type="file" capture="environment" class="hidden" onchange="previewImg(this)"></label>
-                <label class="photo-slot"><span class="text-[10px] text-slate-400">拍簽單</span><input type="file" capture="environment" class="hidden" onchange="previewImg(this)"></label>
+            <div class="grid grid-cols-3 gap-2">
+                <label class="photo-slot">
+                    <div class="text-center">
+                        <span class="text-[10px] font-bold text-slate-400 block">拍車頭</span>
+                        <span class="text-[8px] text-slate-300">必填</span>
+                    </div>
+                    <input type="file" capture="environment" class="hidden" onchange="previewImg(this)">
+                </label>
+                <label class="photo-slot">
+                    <span class="text-[10px] font-bold text-slate-400">拍損壞</span>
+                    <input type="file" capture="environment" class="hidden" onchange="previewImg(this)">
+                </label>
+                <label class="photo-slot">
+                    <span class="text-[10px] font-bold text-slate-400">拍簽單</span>
+                    <input type="file" capture="environment" class="hidden" onchange="previewImg(this)">
+                </label>
             </div>
         </section>
 
-        <!-- 2. 商品清單管理 -->
-        <section class="space-y-3">
-            <div class="flex justify-between items-end">
+        <!-- Step 2: 商品清單 -->
+        <section class="space-y-4">
+            <div class="flex justify-between items-end px-1">
                 <div>
-                    <h2 class="font-bold text-slate-800" id="listTitle">今日移撥明細</h2>
-                    <p class="text-xs text-slate-500">進度: <span id="progressText">0/0</span></p>
+                    <h2 class="font-black text-xl text-slate-900" id="listTitle">今日移撥明細</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Progress: <span id="progressText" class="text-indigo-600">0/0</span></p>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="addItem()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm">+ 新增品項</button>
-                </div>
+                <button onclick="addItem()" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-200 active:scale-95 transition">新增品項</button>
             </div>
 
-            <!-- 清單容器 -->
-            <div id="itemList" class="space-y-3">
-                <!-- 項目將由 JS 動態產生 -->
+            <div id="itemList" class="space-y-4">
+                <!-- 動態載入項目 -->
             </div>
         </section>
 
     </main>
 
-    <!-- 底部動作條 -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md p-4 shadow-[0_-10px_25px_rgba(0,0,0,0.1)] z-50 max-w-md mx-auto border-t border-slate-100">
-        <div class="flex justify-between items-center mb-3">
-            <div class="text-xs">
-                今日合計: <b class="text-indigo-600 text-sm" id="sumQty">0</b> 件 / <b class="text-green-600 text-sm" id="sumPlt">0</b> 板
+    <!-- 底部資訊列 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md p-5 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] z-50 max-w-md mx-auto border-t border-slate-100 rounded-t-[32px]">
+        <div class="flex justify-between items-center mb-5 px-2">
+            <div class="flex gap-6">
+                <div class="flex flex-col"><span class="text-[10px] font-bold text-slate-400 uppercase">總件數 (BOX)</span><b class="text-indigo-600 text-2xl font-black" id="sumQty">0</b></div>
+                <div class="flex flex-col"><span class="text-[10px] font-bold text-slate-400 uppercase">總板數 (PLT)</span><b class="text-emerald-600 text-2xl font-black" id="sumPlt">0</b></div>
             </div>
-            <button onclick="resetData()" class="text-slate-400 text-xs underline">重置所有資料</button>
+            <button onclick="resetData()" class="text-slate-300 text-[10px] font-bold uppercase tracking-widest hover:text-red-500 transition">Reset All</button>
         </div>
         <div class="flex gap-3">
-            <button onclick="shareReport()" class="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-bold flex justify-center items-center gap-2 shadow-lg active:scale-95 transition">
-                🚀 完成並傳送園區報表
+            <button onclick="shareReport()" class="flex-[3] bg-indigo-900 text-white py-5 rounded-2xl font-black text-md flex justify-center items-center gap-2 shadow-xl shadow-indigo-100 active:scale-95 transition">
+                🚀 發送園區報表
             </button>
-            <button onclick="exportCSV()" class="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-2xl font-bold text-sm shadow-sm active:scale-95 transition">
-                Excel存檔
+            <button onclick="exportCSV()" class="flex-1 bg-slate-100 text-slate-700 py-5 rounded-2xl font-black text-xs active:scale-95 transition uppercase">
+                CSV
             </button>
         </div>
     </div>
 
-    <script>
-        let currentTab = 'today';
-        let data = {
-            today: [],
-            tomorrow: []
-        };
-        let carStatus = { plate: '', hasDamage: false, damageNote: '' };
+    <!-- 下拉名單資料庫 -->
+    <datalist id="itemDataList">
+        <!-- JS 會根據 masterData 自動生成 -->
+    </datalist>
 
-        // 初始化
+    <script>
+        // 核心商品資料庫：根據 Excel 照片定義每板標準箱數 (qpp)
+        const masterData = [
+            { id: "24601003001", name: "冷凍美國CR安格斯牛五花火鍋片", qpp: 30, loc: "1C2903", exp: "20261222" },
+            { id: "24200002001", name: "威保 - 冷凍紐西蘭 - 全羊火鍋肉", qpp: 30, loc: "1C3303", exp: "20270202" },
+            { id: "24600105001", name: "立大冷凍豬五花火鍋肉片1000G", qpp: 50, loc: "3B0301", exp: "20270130" },
+            { id: "23904988001", name: "立基 - 冷凍9吋 油酥厚餅", qpp: 28, loc: "3B0501", exp: "20270128" },
+            { id: "24200074001", name: "舍利蓮冷凍紐西蘭小羔羊梅花肉", qpp: 49, loc: "3B1301", exp: "20270131" },
+            { id: "24600005001", name: "思牧 - 冷凍豬五花火鍋片500G", qpp: 35, loc: "3B1401", exp: "20270210" },
+            { id: "23904009001", name: "泉泓起酥蛋糕(家庭號)", qpp: 24, loc: "3B3901", exp: "20260901" },
+            { id: "24601107001", name: "美國CR安格斯牛 五花火鍋片1", qpp: 32, loc: "3B4102", exp: "20261218" },
+            { id: "23904125001", name: "泉泓冷凍蜂蜜蛋糕", qpp: 28, loc: "3B4702", exp: "20260902" },
+            { id: "23904040001", name: "泉泓起酥蛋糕", qpp: 28, loc: "3B4801", exp: "20260903" },
+            { id: "24601108001", name: "舍利蓮冷凍澳洲穀飼 - 牛雪花肉", qpp: 49, loc: "4B0701", exp: "20270131" },
+            { id: "24600001001", name: "思牧 - 冷凍豬梅花火鍋片500G", qpp: 35, loc: "4B1401", exp: "20270210" },
+            { id: "24920267001", name: "威保 - 美國冷凍去骨腿排", qpp: 42, loc: "4B1802", exp: "20270202" }
+        ];
+
+        let currentTab = 'today';
+        let data = { today: [], tomorrow: [] };
+        let carStatus = { plate: '', hasDamage: false };
+
         window.onload = () => {
-            const saved = localStorage.getItem('warehouse_v4_data');
-            if (saved) data = JSON.parse(saved);
+            // 初始化 Date
+            document.getElementById('todayDate').innerText = new Date().toLocaleDateString();
             
-            const savedCar = localStorage.getItem('warehouse_v4_car');
+            // 生成下拉名單
+            const dl = document.getElementById('itemDataList');
+            masterData.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = `${m.name} (${m.id})`;
+                dl.appendChild(opt);
+            });
+
+            // 讀取暫存
+            const saved = localStorage.getItem('wh_v6_data');
+            if (saved) data = JSON.parse(saved);
+            const savedCar = localStorage.getItem('wh_v6_car');
             if (savedCar) {
                 carStatus = JSON.parse(savedCar);
                 document.getElementById('carPlate').value = carStatus.plate;
                 setDamage(carStatus.hasDamage);
             }
-
-            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString();
             renderList();
         };
 
         function switchTab(tab) {
             currentTab = tab;
-            document.getElementById('tabToday').className = tab === 'today' ? 'flex-1 py-2 text-sm rounded-md transition tab-active bg-white text-indigo-700 shadow-sm' : 'flex-1 py-2 text-sm rounded-md transition text-indigo-200';
-            document.getElementById('tabTomorrow').className = tab === 'tomorrow' ? 'flex-1 py-2 text-sm rounded-md transition tab-active bg-white text-indigo-700 shadow-sm' : 'flex-1 py-2 text-sm rounded-md transition text-indigo-200';
-            
+            document.getElementById('tabToday').className = tab === 'today' ? 'flex-1 py-2 text-sm rounded-lg transition font-bold bg-white text-indigo-900 shadow-sm' : 'flex-1 py-2 text-sm rounded-lg transition font-bold text-indigo-200';
+            document.getElementById('tabTomorrow').className = tab === 'tomorrow' ? 'flex-1 py-2 text-sm rounded-lg transition font-bold bg-white text-indigo-900 shadow-sm' : 'flex-1 py-2 text-sm rounded-lg transition font-bold text-indigo-200';
+            document.getElementById('sectionVehicle').classList.toggle('hidden', tab === 'tomorrow');
             document.getElementById('listTitle').innerText = tab === 'today' ? '今日移撥明細' : '明日預排明細';
-            document.getElementById('sectionVehicle').style.display = tab === 'today' ? 'block' : 'none';
             renderList();
         }
 
         function renderList() {
             const list = document.getElementById('itemList');
             list.innerHTML = '';
-            const items = data[currentTab];
-
-            items.forEach((item, index) => {
+            data[currentTab].forEach((item, index) => {
                 const div = document.createElement('div');
-                div.className = `item-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative ${item.done ? 'item-done' : ''}`;
+                div.className = `item-card bg-white p-5 rounded-[24px] shadow-sm relative ${item.done ? 'item-done' : ''}`;
                 div.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex-1">
-                            <input type="text" value="${item.name}" onchange="updateItem(${index}, 'name', this.value)" placeholder="品名 / ITEM" class="w-full font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-indigo-300 focus:outline-none">
-                            <div class="flex gap-2 mt-1">
-                                <input type="text" value="${item.loc}" onchange="updateItem(${index}, 'loc', this.value)" placeholder="儲位" class="text-[10px] w-16 p-1 bg-slate-100 rounded">
-                                <input type="text" value="${item.exp}" onchange="updateItem(${index}, 'exp', this.value)" placeholder="有效期" class="text-[10px] w-24 p-1 bg-slate-100 rounded font-mono text-blue-600">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Item Name / ID</span>
+                                <input list="itemDataList" value="${item.name}" onchange="autoFillItem(${index}, this.value)" placeholder="輸入關鍵字..." class="w-full font-black text-slate-900 bg-transparent border-b-2 border-slate-50 focus:border-indigo-500 focus:outline-none py-1 text-md">
+                            </div>
+                            <button onclick="removeItem(${index})" class="text-slate-200 hover:text-red-400 p-1">✕</button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span class="text-[9px] font-bold text-slate-400 block uppercase">儲位</span>
+                                <input type="text" value="${item.loc}" onchange="updateItem(${index}, 'loc', this.value)" class="w-full bg-transparent text-xs font-bold text-slate-600 focus:outline-none">
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span class="text-[9px] font-bold text-slate-400 block uppercase">有效期 (YYYYMMDD)</span>
+                                <input type="text" value="${item.exp}" onchange="updateItem(${index}, 'exp', this.value)" class="w-full bg-transparent text-xs font-black text-blue-600 focus:outline-none font-mono">
                             </div>
                         </div>
-                        <div class="flex flex-col items-end gap-1">
-                            <div class="flex items-center gap-1">
-                                <span class="text-[10px] text-slate-400">移撥</span>
-                                <input type="number" value="${item.qty}" onchange="updateItem(${index}, 'qty', this.value)" class="w-14 text-center font-bold text-indigo-600 border rounded">
+
+                        <div class="flex items-end justify-between gap-4 pt-2 border-t border-slate-50">
+                            <div class="flex flex-1 gap-3">
+                                <div class="flex-1 bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
+                                    <span class="text-[9px] font-black text-emerald-500 block uppercase">板數 (PLT)</span>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" value="${item.plt}" onchange="updatePlt(${index}, this.value)" class="w-full bg-transparent text-xl font-black text-emerald-700 focus:outline-none">
+                                    </div>
+                                </div>
+                                <div class="flex-1 bg-indigo-50 p-3 rounded-2xl border border-indigo-100">
+                                    <span class="text-[9px] font-black text-indigo-400 block uppercase leading-none">總件數 (BOX)</span>
+                                    <div class="flex flex-col">
+                                        <input type="number" value="${item.qty}" onchange="updateItem(${index}, 'qty', this.value)" class="w-full bg-transparent text-xl font-black text-indigo-700 focus:outline-none">
+                                        <span class="text-[8px] text-indigo-300 font-bold">Std: ${item.qpp || 0}/板</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-1">
-                                <span class="text-[10px] text-slate-400">板數</span>
-                                <input type="number" value="${item.plt}" onchange="updateItem(${index}, 'plt', this.value)" class="w-14 text-center font-bold text-green-600 border rounded">
+                            <div class="flex flex-col gap-2">
+                                <label class="flex items-center gap-2 px-4 py-3 bg-slate-100 rounded-2xl cursor-pointer">
+                                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleDone(${index})" class="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span class="text-xs font-black text-slate-600 uppercase">Done</span>
+                                </label>
                             </div>
                         </div>
-                    </div>
-                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-50">
-                        <label class="flex items-center gap-2 text-xs text-slate-500">
-                            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleDone(${index})" class="w-4 h-4 rounded"> ${item.done ? '已完成' : '核對中'}
-                        </label>
-                        <div class="flex gap-2">
-                            <button onclick="moveTask(${index})" class="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold">
-                                ➔ 移至${currentTab === 'today' ? '明日' : '今日'}
-                            </button>
-                            <button onclick="removeItem(${index})" class="text-red-400 p-1">✕</button>
-                        </div>
+                        ${currentTab === 'tomorrow' ? `<button onclick="moveToToday(${index})" class="w-full py-3 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-xl border border-indigo-100 uppercase tracking-widest active:bg-indigo-100">Move to Today</button>` : ''}
                     </div>
                 `;
                 list.appendChild(div);
             });
-
-            calcTotals();
-            saveToLocal();
+            updateStats();
         }
 
-        // 核心邏輯功能
         function addItem() {
-            data[currentTab].unshift({ name: '', loc: '', exp: '', qty: 0, plt: 1, done: false });
+            data[currentTab].unshift({ name: '', id: '', loc: '', exp: '', qty: 0, plt: 1, qpp: 0, done: false });
             renderList();
         }
 
-        function updateItem(index, field, value) {
-            data[currentTab][index][field] = value;
-            saveToLocal();
-            calcTotals();
+        // 當使用者選擇品名，自動換算件數
+        function autoFillItem(index, val) {
+            const found = masterData.find(m => val.includes(m.name) || val.includes(m.id));
+            if (found) {
+                const itm = data[currentTab][index];
+                itm.name = found.name;
+                itm.id = found.id;
+                itm.loc = found.loc;
+                itm.exp = found.exp;
+                itm.qpp = found.qpp; // 儲存基準
+                itm.plt = 1;
+                itm.qty = found.qpp; // 預設 1 板 = 標準箱數
+            } else {
+                data[currentTab][index].name = val;
+            }
+            renderList();
+            saveAll();
+        }
+
+        // 修改板數連動件數
+        function updatePlt(index, val) {
+            const itm = data[currentTab][index];
+            itm.plt = Number(val);
+            if (itm.qpp > 0) {
+                itm.qty = itm.plt * itm.qpp; // 自動連動換算
+            }
+            renderList();
+            saveAll();
+        }
+
+        function updateItem(index, field, val) {
+            data[currentTab][index][field] = val;
+            saveAll();
+            updateStats();
         }
 
         function toggleDone(index) {
             data[currentTab][index].done = !data[currentTab][index].done;
             renderList();
+            saveAll();
         }
 
-        function moveTask(index) {
-            const target = currentTab === 'today' ? 'tomorrow' : 'today';
-            const item = data[currentTab].splice(index, 1)[0];
-            data[target].push(item);
+        function moveToToday(index) {
+            const itm = data.tomorrow.splice(index, 1)[0];
+            data.today.push(itm);
             renderList();
+            saveAll();
         }
 
         function removeItem(index) {
-            if(confirm('確定刪除？')) {
+            if(confirm('確定移除此項目？')) {
                 data[currentTab].splice(index, 1);
                 renderList();
+                saveAll();
             }
+        }
+
+        function updateStats() {
+            const items = data.today;
+            let totalQty = 0, totalPlt = 0, doneCount = 0;
+            items.forEach(i => {
+                totalQty += Number(i.qty);
+                totalPlt += Number(i.plt);
+                if(i.done) doneCount++;
+            });
+            document.getElementById('sumQty').innerText = totalQty;
+            document.getElementById('sumPlt').innerText = totalPlt;
+            document.getElementById('progressText').innerText = `${doneCount}/${items.length}`;
         }
 
         function setDamage(status) {
             carStatus.hasDamage = status;
-            document.getElementById('btnNoDamage').className = status ? "py-2 rounded-lg border-2 border-slate-200 text-slate-400 font-bold text-sm" : "py-2 rounded-lg border-2 border-green-500 text-green-600 font-bold text-sm";
-            document.getElementById('btnHasDamage').className = status ? "py-2 rounded-lg border-2 border-red-500 text-red-600 font-bold text-sm bg-red-50" : "py-2 rounded-lg border-2 border-slate-200 text-slate-400 font-bold text-sm";
-            saveToLocal();
+            document.getElementById('btnNoDamage').className = status ? "py-4 rounded-2xl border-2 border-slate-100 text-slate-300 font-black text-sm" : "py-4 rounded-2xl border-2 border-emerald-500 text-emerald-600 font-black text-sm bg-emerald-50/50";
+            document.getElementById('btnHasDamage').className = status ? "py-4 rounded-2xl border-2 border-red-500 text-red-600 font-black text-sm bg-red-50" : "py-4 rounded-2xl border-2 border-slate-100 text-slate-300 font-black text-sm";
+            saveAll();
+        }
+
+        function saveAll() {
+            localStorage.setItem('wh_v6_data', JSON.stringify(data));
+            carStatus.plate = document.getElementById('carPlate').value;
+            localStorage.setItem('wh_v6_car', JSON.stringify(carStatus));
+            document.getElementById('saveStatus').innerText = "自動儲存成功 " + new Date().toLocaleTimeString();
         }
 
         function previewImg(input) {
@@ -221,27 +322,8 @@
             }
         }
 
-        function calcTotals() {
-            const items = data.today;
-            let q = 0, p = 0, d = 0;
-            items.forEach(i => {
-                q += Number(i.qty);
-                p += Number(i.plt);
-                if(i.done) d++;
-            });
-            document.getElementById('sumQty').innerText = q;
-            document.getElementById('sumPlt').innerText = p;
-            document.getElementById('progressText').innerText = `${d}/${items.length}`;
-        }
-
-        function saveToLocal() {
-            localStorage.setItem('warehouse_v4_data', JSON.stringify(data));
-            carStatus.plate = document.getElementById('carPlate').value;
-            localStorage.setItem('warehouse_v4_car', JSON.stringify(carStatus));
-        }
-
         function resetData() {
-            if(confirm('注意！這將清空所有今日與明日的紀錄，確定嗎？')) {
+            if(confirm('注意：這將永久清除今日與明日所有資料，確定嗎？')) {
                 localStorage.clear();
                 location.reload();
             }
@@ -249,29 +331,26 @@
 
         async function shareReport() {
             const plate = document.getElementById('carPlate').value;
-            if(!plate) { alert('請填寫車牌再回報！'); return; }
-            
-            const msg = `【移倉離場回報】\n日期: ${new Date().toLocaleDateString()}\n車牌: ${plate}\n外觀: ${carStatus.hasDamage ? '⚠️損壞' : '✅正常'}\n----------------\n今日移撥總計: ${document.getElementById('sumQty').innerText} 件 / ${document.getElementById('sumPlt').innerText} 板\n進度: ${document.getElementById('progressText').innerText}\n明日待辦: ${data.tomorrow.length} 項\n\n(單據與車體照片已記錄)`;
-
+            const msg = `【移倉離場回報 - V6】\n車牌: ${plate || '未填'}\n安檢: ${carStatus.hasDamage ? '⚠️外觀損壞' : '✅外觀正常'}\n----------------\n總計: ${document.getElementById('sumQty').innerText} 件 / ${document.getElementById('sumPlt').innerText} 板\n進度: ${document.getElementById('progressText').innerText}\n明日工作量: ${data.tomorrow.length} 項\n\n(系統照片已保存)`;
             if (navigator.share) {
-                await navigator.share({ title: '移倉報表', text: msg });
+                await navigator.share({ title: '移倉報表 V6', text: msg });
             } else {
                 navigator.clipboard.writeText(msg);
-                alert('報表內容已複製，請貼上到 LINE 並手動傳送照片。');
+                alert('報表內容已複製到剪貼簿。');
             }
         }
 
         function exportCSV() {
-            let csv = "\ufeff頁籤,儲位,ITEM/品名,數量,板數,有效日期,狀態\n";
+            let csv = "\ufeff作業頁籤,品名,ITEM,儲位,有效期,每板標準,板數,總件數,狀態\n";
             ['today', 'tomorrow'].forEach(tab => {
                 data[tab].forEach(i => {
-                    csv += `${tab === 'today' ? '今日' : '明日'},${i.loc},${i.name},${i.qty},${i.plt},${i.exp},${i.done ? '完成' : '待辦'}\n`;
+                    csv += `${tab},${i.name},${i.id},${i.loc},${i.exp},${i.qpp},${i.plt},${i.qty},${i.done ? '完成' : '待辦'}\n`;
                 });
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `移倉紀錄_全_${new Date().getTime()}.csv`;
+            link.download = `Warehouse_V6_${new Date().getTime()}.csv`;
             link.click();
         }
     </script>
