@@ -3,136 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉助手 V8 - 行動優化版</title>
+    <title>移倉助手 V9 - 智慧搜尋版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap');
-        body { font-family: 'Lexend', 'Noto Sans TC', sans-serif; background-color: #f0f2f5; -webkit-user-select: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Lexend', 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
         
-        /* 針對手機觸控優化 */
-        .btn-active:active { transform: scale(0.96); opacity: 0.8; }
-        .tap-target { min-height: 48px; }
+        /* 手機按鈕反饋 */
+        .btn-tap:active { transform: scale(0.95); opacity: 0.9; }
         
-        /* 隱藏卷軸但保有功能 */
+        /* 隱藏卷軸 */
         ::-webkit-scrollbar { display: none; }
-        
-        .sticky-summary {
-            box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.1);
-            border-radius: 24px 24px 0 0;
-        }
 
-        /* 狀態顏色切換 */
-        .status-done { background-color: #ecfdf5 !important; border-left: 10px solid #10b981 !important; }
-        .status-pending { border-left: 10px solid #6366f1; }
+        /* 狀態樣式 */
+        .card-done { background-color: #f0fdf4 !important; border-left: 10px solid #22c55e !important; opacity: 0.7; }
+        .card-pending { border-left: 10px solid #4f46e5; }
+
+        /* 全螢幕搜尋遮罩 */
+        #searchModal { transition: transform 0.3s ease-out; transform: translateY(100%); }
+        #searchModal.active { transform: translateY(0); }
     </style>
 </head>
-<body class="pb-52">
+<body class="pb-44 overflow-x-hidden">
 
-    <!-- 頂部：日期與頁籤 (固定) -->
-    <header class="bg-indigo-700 text-white sticky top-0 z-50 p-3 shadow-lg">
-        <div class="flex justify-between items-center mb-3 px-1">
-            <h1 class="text-xl font-black italic tracking-tighter">TRANSFER <span class="text-indigo-300">PRO</span></h1>
-            <div class="text-right">
-                <p id="clock" class="text-xs font-bold leading-none"></p>
-                <p class="text-[9px] opacity-70 uppercase tracking-widest">Auto-Saving</p>
-            </div>
+    <!-- 頂部選單 -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 p-4 shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-xl font-black italic tracking-tighter text-indigo-400">WH-ASSIST <span class="text-white">V9</span></h1>
+            <div id="saveStatus" class="text-[9px] bg-slate-800 px-3 py-1 rounded-full font-bold uppercase tracking-widest text-slate-400">Ready</div>
         </div>
-        
-        <div class="flex bg-indigo-900/40 rounded-2xl p-1 shadow-inner">
-            <button onclick="switchTab('today')" id="tabToday" class="flex-1 py-3 text-sm rounded-xl font-black transition-all bg-white text-indigo-700 shadow-sm">今日出貨</button>
-            <button onclick="switchTab('tomorrow')" id="tabTomorrow" class="flex-1 py-3 text-sm rounded-xl font-black transition-all text-indigo-200">明日預排</button>
+        <div class="flex bg-slate-800 rounded-2xl p-1 gap-1">
+            <button onclick="switchTab('today')" id="tabToday" class="flex-1 py-3 text-sm rounded-xl font-black transition-all bg-slate-700 text-white shadow-sm">今日作業</button>
+            <button onclick="switchTab('tomorrow')" id="tabTomorrow" class="flex-1 py-3 text-sm rounded-xl font-black transition-all text-slate-500">明日預排</button>
         </div>
     </header>
 
-    <main class="max-w-md mx-auto p-3 space-y-4">
-
-        <!-- 車輛安檢區塊 (大卡片) -->
-        <section id="sectionVehicle" class="bg-white rounded-[28px] p-5 shadow-sm space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Vehicle Scan</span>
-                <input type="text" id="carPlate" placeholder="點擊輸入車牌" class="text-right text-xl font-black text-indigo-600 focus:outline-none w-2/3 uppercase">
+    <main class="max-w-md mx-auto p-4 space-y-4">
+        
+        <!-- 車輛安檢 -->
+        <section id="sectionVehicle" class="bg-white rounded-[32px] p-6 shadow-sm space-y-4 border border-slate-100">
+            <div class="flex justify-between items-center">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Vehicle Info</span>
+                <input type="text" id="carPlate" placeholder="輸入車牌" class="text-right text-xl font-black text-indigo-600 focus:outline-none w-1/2 uppercase">
             </div>
-
             <div class="flex gap-2">
-                <button onclick="setDamage(false)" id="btnNoDamage" class="flex-1 py-4 rounded-2xl border-2 font-black text-sm flex flex-col items-center btn-active border-indigo-600 text-indigo-600 bg-indigo-50/50">
-                    <span class="text-lg">✅</span>正常無損
-                </button>
-                <button onclick="setDamage(true)" id="btnHasDamage" class="flex-1 py-4 rounded-2xl border-2 font-black text-sm flex flex-col items-center btn-active border-slate-100 text-slate-300">
-                    <span class="text-lg">⚠️</span>外觀凹損
-                </button>
+                <button onclick="setDamage(false)" id="btnNoDamage" class="flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap border-indigo-600 text-indigo-600 bg-indigo-50/50">✅ 外觀正常</button>
+                <button onclick="setDamage(true)" id="btnHasDamage" class="flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap border-slate-100 text-slate-300">⚠️ 凹損/凹箱</button>
             </div>
-
             <div class="grid grid-cols-3 gap-2">
-                <label class="bg-slate-50 rounded-2xl h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden tap-target">
-                    <span class="text-[10px] font-bold text-slate-400">📷車頭</span>
-                    <input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
+                <label class="bg-slate-50 rounded-2xl h-16 flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
+                    <span class="text-[9px] font-bold text-slate-400">📷 車頭</span><input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
                 </label>
-                <label class="bg-slate-50 rounded-2xl h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden tap-target">
-                    <span class="text-[10px] font-bold text-slate-400">📷損壞</span>
-                    <input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
+                <label class="bg-slate-50 rounded-2xl h-16 flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
+                    <span class="text-[9px] font-bold text-slate-400">📷 損壞</span><input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
                 </label>
-                <label class="bg-slate-50 rounded-2xl h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden tap-target">
-                    <span class="text-[10px] font-bold text-slate-400">📷單據</span>
-                    <input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
+                <label class="bg-slate-50 rounded-2xl h-16 flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
+                    <span class="text-[9px] font-bold text-slate-400">📷 單據</span><input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
                 </label>
             </div>
         </section>
 
-        <!-- 商品列表區塊 -->
-        <div id="itemList" class="space-y-4 pb-10">
-            <!-- 由 JS 動態生成 -->
+        <!-- 商品清單 -->
+        <div id="itemList" class="space-y-4 pb-12">
+            <!-- JS 動態生成 -->
         </div>
 
     </main>
 
-    <!-- 底部固定區：統計與主要操作 ( thumb zone ) -->
-    <div class="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto">
-        
-        <!-- 統計數據 (懸浮效果) -->
-        <div class="bg-white/90 backdrop-blur-md sticky-summary p-5 border-t border-slate-100">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex gap-5">
-                    <div class="flex flex-col"><span class="text-[9px] font-black text-slate-400 uppercase">Total Boxes</span><b class="text-2xl font-black text-indigo-600 leading-none" id="sumQty">0</b></div>
-                    <div class="flex flex-col"><span class="text-[9px] font-black text-slate-400 uppercase">Total Plt</span><b class="text-2xl font-black text-emerald-500 leading-none" id="sumPlt">0</b></div>
-                </div>
-                <div class="text-right">
-                    <span id="progressText" class="text-[10px] font-black bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full uppercase">Progress 0%</span>
-                </div>
-            </div>
-
-            <!-- 主按鈕組 -->
-            <div class="flex gap-3">
-                <button onclick="addItem()" class="flex-1 bg-slate-100 text-slate-800 py-4 rounded-2xl font-black text-sm btn-active flex items-center justify-center gap-2">
-                    <span class="text-lg">+</span>新增
-                </button>
-                <button onclick="shareReport()" class="flex-[2] bg-indigo-600 text-white py-4 rounded-2xl font-black text-md shadow-lg shadow-indigo-200 btn-active flex items-center justify-center gap-2">
-                    🚀 傳送報表
-                </button>
-                <button onclick="exportCSV()" class="w-14 bg-slate-100 text-slate-500 py-4 rounded-2xl font-black text-xs btn-active">
-                    CSV
-                </button>
-            </div>
+    <!-- 底部控制面板 -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-white/90 backdrop-blur-lg p-6 rounded-t-[40px] shadow-[0_-15px_35px_rgba(0,0,0,0.1)] border-t border-slate-100">
+        <div class="flex justify-around items-center mb-5">
+            <div class="text-center"><p class="text-[9px] font-black text-slate-400 uppercase mb-1">Total BOX</p><b class="text-3xl font-black text-indigo-600 leading-none" id="sumQty">0</b></div>
+            <div class="h-8 w-[1px] bg-slate-100"></div>
+            <div class="text-center"><p class="text-[9px] font-black text-slate-400 uppercase mb-1">Total PLT</p><b class="text-3xl font-black text-emerald-500 leading-none" id="sumPlt">0</b></div>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="addItem()" class="flex-1 bg-slate-900 text-white py-5 rounded-3xl font-black text-sm btn-tap shadow-lg shadow-slate-200">＋新增</button>
+            <button onclick="shareReport()" class="flex-[2] bg-indigo-600 text-white py-5 rounded-3xl font-black text-md btn-tap shadow-xl shadow-indigo-100">🚀 發送回報</button>
+            <button onclick="exportCSV()" class="w-14 bg-slate-100 text-slate-400 py-5 rounded-3xl font-black text-xs btn-tap text-center">CSV</button>
         </div>
     </div>
 
-    <!-- 商品下拉清單 -->
-    <datalist id="itemLib">
-        <option value="冷凍美國CR安格斯牛五花火鍋片 (24601003001)">
-        <option value="威保 - 冷凍紐西蘭 - 全羊火鍋肉 (24200002001)">
-        <option value="立大冷凍豬五花火鍋肉片1000G (24600105001)">
-        <option value="立基 - 冷凍9吋 油酥厚餅 (23904988001)">
-        <option value="舍利蓮冷凍紐西蘭小羔羊梅花肉 (24200074001)">
-        <option value="思牧 - 冷凍豬五花火鍋片500G (24600005001)">
-        <option value="泉泓起酥蛋糕(家庭號) (23904009001)">
-        <option value="美國CR安格斯牛 五花火鍋片1 (24601107001)">
-        <option value="泉泓冷凍蜂蜜蛋糕 (23904125001)">
-        <option value="泉泓起酥蛋糕 (23904040001)">
-        <option value="舍利蓮冷凍澳洲穀飼 - 牛雪花肉 (24601108001)">
-        <option value="思牧 - 冷凍豬梅花火鍋片500G (24600001001)">
-        <option value="威保 - 美國冷凍去骨腿排 (24920267001)">
-    </datalist>
+    <!-- ================= 智慧搜尋遮罩 (Search Modal) ================= -->
+    <div id="searchModal" class="fixed inset-0 bg-white z-[100] flex flex-col p-4 shadow-2xl">
+        <div class="flex items-center gap-3 mb-4">
+            <button onclick="closeSearch()" class="p-2 text-slate-400 text-2xl">✕</button>
+            <input type="text" id="searchInput" oninput="filterSearch(this.value)" placeholder="輸入名稱或 ITEM 編號搜尋..." class="flex-1 p-4 bg-slate-100 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div id="searchResults" class="flex-1 overflow-y-auto space-y-2 pb-10 px-1">
+            <!-- 搜尋結果 -->
+        </div>
+        <button onclick="useCustomName()" class="w-full py-4 bg-slate-100 text-slate-500 font-bold rounded-2xl mt-2 italic text-sm underline">+ 使用自定義品名輸入</button>
+    </div>
 
     <script>
+        // 資料庫 (來自圖片)
         const masterData = [
             { id: "24601003001", name: "冷凍美國CR安格斯牛五花火鍋片", qpp: 30, loc: "1C2903", exp: "20261222" },
             { id: "24200002001", name: "威保 - 冷凍紐西蘭 - 全羊火鍋肉", qpp: 30, loc: "1C3303", exp: "20270202" },
@@ -152,26 +117,26 @@
         let currentTab = 'today';
         let data = { today: [], tomorrow: [] };
         let carStatus = { plate: '', hasDamage: false };
+        let activeIdx = null; // 當前正在編輯的品項索引
 
         window.onload = () => {
-            const savedData = localStorage.getItem('wh_v8_data');
+            const savedData = localStorage.getItem('wh_v9_data');
             if (savedData) data = JSON.parse(savedData);
-            const savedCar = localStorage.getItem('wh_v8_car');
+            const savedCar = localStorage.getItem('wh_v9_car');
             if (savedCar) {
                 carStatus = JSON.parse(savedCar);
                 document.getElementById('carPlate').value = carStatus.plate;
                 setDamage(carStatus.hasDamage);
             }
-            setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString(); }, 1000);
             renderList();
         };
 
         function switchTab(tab) {
             currentTab = tab;
-            const isToday = tab === 'today';
-            document.getElementById('tabToday').className = isToday ? "flex-1 py-3 text-sm rounded-xl font-black transition-all bg-white text-indigo-700 shadow-sm" : "flex-1 py-3 text-sm rounded-xl font-black transition-all text-indigo-200";
-            document.getElementById('tabTomorrow').className = !isToday ? "flex-1 py-3 text-sm rounded-xl font-black transition-all bg-white text-indigo-700 shadow-sm" : "flex-1 py-3 text-sm rounded-xl font-black transition-all text-indigo-200";
-            document.getElementById('sectionVehicle').classList.toggle('hidden', !isToday);
+            const isT = tab === 'today';
+            document.getElementById('tabToday').className = isT ? "flex-1 py-3 text-sm rounded-xl font-black bg-slate-700 text-white shadow-sm" : "flex-1 py-3 text-sm rounded-xl font-black text-slate-500";
+            document.getElementById('tabTomorrow').className = !isT ? "flex-1 py-3 text-sm rounded-xl font-black bg-slate-700 text-white shadow-sm" : "flex-1 py-3 text-sm rounded-xl font-black text-slate-500";
+            document.getElementById('sectionVehicle').classList.toggle('hidden', !isT);
             renderList();
         }
 
@@ -180,36 +145,36 @@
             list.innerHTML = '';
             data[currentTab].forEach((item, index) => {
                 const div = document.createElement('div');
-                div.className = `bg-white rounded-[24px] p-5 shadow-sm transition-all relative ${item.done ? 'status-done' : 'status-pending'}`;
+                div.className = `bg-white rounded-[32px] p-6 shadow-sm relative transition-all ${item.done ? 'card-done' : 'card-pending'}`;
                 div.innerHTML = `
-                    <div class="flex flex-col gap-4">
+                    <div class="space-y-4">
                         <div class="flex justify-between items-start">
-                            <div class="w-full">
-                                <input list="itemLib" value="${item.name}" onchange="autoFill(${index}, this.value)" placeholder="品名 / ITEM ID" class="w-full font-black text-slate-800 bg-transparent border-b-2 border-slate-50 focus:border-indigo-400 focus:outline-none py-1 text-md">
+                            <div onclick="openSearch(${index})" class="flex-1">
+                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-1">Product Name / ID</span>
+                                <p class="font-black text-slate-800 text-md leading-tight">${item.name || '<點擊選擇品項或輸入搜尋>'}</p>
                                 <div class="flex gap-4 mt-2">
-                                    <span class="text-[10px] font-bold text-slate-400">儲位: <span class="text-slate-900">${item.loc || '--'}</span></span>
-                                    <span class="text-[10px] font-bold text-slate-400">有效期: <span class="text-indigo-600">${item.exp || '--'}</span></span>
+                                    <span class="text-[9px] font-black text-slate-400 uppercase">儲位: <b class="text-slate-800 font-black">${item.loc || '--'}</b></span>
+                                    <span class="text-[9px] font-black text-slate-400 uppercase">有效: <b class="text-indigo-600 font-black">${item.exp || '--'}</b></span>
                                 </div>
                             </div>
-                            <button onclick="removeItem(${index})" class="text-slate-300 ml-4 p-1">✕</button>
+                            <button onclick="removeItem(${index})" class="text-slate-200 p-2">✕</button>
                         </div>
 
-                        <div class="flex gap-2 items-end">
-                            <div class="flex-1 bg-emerald-50 rounded-2xl p-3">
-                                <span class="text-[9px] font-black text-emerald-600 uppercase block mb-1">Pallets</span>
-                                <input type="number" inputmode="decimal" value="${item.plt}" onchange="updatePlt(${index}, this.value)" class="w-full bg-transparent text-2xl font-black text-emerald-800 focus:outline-none">
+                        <div class="flex gap-3 items-end">
+                            <div class="flex-1 bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
+                                <span class="text-[9px] font-black text-emerald-600 uppercase block mb-1">PLT 板數</span>
+                                <input type="number" inputmode="decimal" value="${item.plt}" onchange="updatePlt(${index}, this.value)" class="w-full bg-transparent text-2xl font-black text-emerald-700 focus:outline-none">
                             </div>
-                            <div class="flex-1 bg-indigo-50 rounded-2xl p-3 border-2 border-transparent focus-within:border-indigo-200">
-                                <span class="text-[9px] font-black text-indigo-600 uppercase block mb-1">Total Boxes</span>
-                                <input type="number" inputmode="numeric" value="${item.qty}" onchange="updateQty(${index}, this.value)" class="w-full bg-transparent text-2xl font-black text-indigo-800 focus:outline-none">
-                                <p class="text-[8px] text-indigo-300 font-bold mt-1">Std: ${item.qpp || 0}/plt</p>
+                            <div class="flex-1 bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
+                                <span class="text-[9px] font-black text-indigo-600 uppercase block mb-1">BOX 總件數</span>
+                                <input type="number" inputmode="numeric" value="${item.qty}" onchange="updateQty(${index}, this.value)" class="w-full bg-transparent text-2xl font-black text-indigo-700 focus:outline-none">
+                                <p class="text-[8px] text-indigo-300 font-black mt-1">Std: ${item.qpp || 0}/plt</p>
                             </div>
-                            <button onclick="toggleDone(${index})" class="h-16 w-16 rounded-2xl btn-active flex flex-col items-center justify-center font-black text-[10px] shadow-sm ${item.done ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}">
-                                <span class="text-xl">${item.done ? '✓' : '♺'}</span>
-                                ${item.done ? 'DONE' : 'CHECK'}
+                            <button onclick="toggleDone(${index})" class="h-16 w-16 rounded-3xl btn-tap flex flex-col items-center justify-center font-black text-[9px] shadow-sm ${item.done ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}">
+                                <span class="text-xl mb-1">${item.done ? '✅' : '❓'}</span>DONE
                             </button>
                         </div>
-                        ${currentTab === 'tomorrow' ? `<button onclick="moveToToday(${index})" class="w-full py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-xl border border-indigo-100">MOVE TO TODAY ➔</button>` : ''}
+                        ${currentTab === 'tomorrow' ? `<button onclick="moveToday(${index})" class="w-full py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-xl border border-indigo-100 uppercase tracking-widest">移至今日作業 ➔</button>` : ''}
                     </div>
                 `;
                 list.appendChild(div);
@@ -217,17 +182,48 @@
             updateStats();
         }
 
-        function autoFill(index, val) {
-            const found = masterData.find(m => val.includes(m.name) || val.includes(m.id));
-            if (found) {
-                const itm = data[currentTab][index];
-                Object.assign(itm, found, { plt: 1, qty: found.qpp });
-            } else {
-                data[currentTab][index].name = val;
-            }
-            renderList(); save();
+        // --- 搜尋核心邏輯 ---
+        function openSearch(idx) {
+            activeIdx = idx;
+            document.getElementById('searchModal').classList.add('active');
+            document.getElementById('searchInput').focus();
+            filterSearch(''); // 初始化顯示
         }
 
+        function closeSearch() {
+            document.getElementById('searchModal').classList.remove('active');
+            document.getElementById('searchInput').value = '';
+        }
+
+        function filterSearch(query) {
+            const results = document.getElementById('searchResults');
+            results.innerHTML = '';
+            const filtered = masterData.filter(m => m.name.includes(query) || m.id.includes(query));
+            
+            filtered.forEach(m => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 bg-slate-50 border border-slate-100 rounded-2xl active:bg-indigo-50 transition-colors";
+                btn.innerHTML = `<p class="font-black text-slate-800">${m.name}</p>
+                                 <p class="text-xs text-slate-400 font-bold uppercase mt-1">ITEM: ${m.id} | STD: ${m.qpp} / PLT</p>`;
+                btn.onclick = () => selectItem(m);
+                results.appendChild(btn);
+            });
+        }
+
+        function selectItem(m) {
+            const itm = data[currentTab][activeIdx];
+            Object.assign(itm, m, { plt: 1, qty: m.qpp, done: false });
+            renderList(); save(); closeSearch();
+        }
+
+        function useCustomName() {
+            const query = document.getElementById('searchInput').value;
+            const itm = data[currentTab][activeIdx];
+            itm.name = query || "自定義商品";
+            renderList(); save(); closeSearch();
+        }
+
+        // --- 資料異動邏輯 ---
         function updatePlt(idx, val) {
             const itm = data[currentTab][idx];
             itm.plt = Number(val);
@@ -237,30 +233,29 @@
 
         function updateQty(idx, val) { data[currentTab][idx].qty = Number(val); updateStats(); save(); }
         function toggleDone(idx) { data[currentTab][idx].done = !data[currentTab][idx].done; renderList(); save(); }
-        function removeItem(idx) { if(confirm('刪除此項?')) { data[currentTab].splice(idx,1); renderList(); save(); } }
+        function removeItem(idx) { if(confirm('確定移除品項?')) { data[currentTab].splice(idx,1); renderList(); save(); } }
         function addItem() { data[currentTab].unshift({ name: '', loc: '', exp: '', qty: 0, plt: 1, qpp: 0, done: false }); renderList(); window.scrollTo(0,0); }
-        function moveToToday(idx) { data.today.push(data.tomorrow.splice(idx,1)[0]); renderList(); save(); }
+        function moveToday(idx) { data.today.push(data.tomorrow.splice(idx,1)[0]); renderList(); save(); }
+
+        function updateStats() {
+            let q = 0, p = 0;
+            data.today.forEach(i => { q += Number(i.qty); p += Number(i.plt); });
+            document.getElementById('sumQty').innerText = q;
+            document.getElementById('sumPlt').innerText = p;
+        }
 
         function setDamage(status) {
             carStatus.hasDamage = status;
-            document.getElementById('btnNoDamage').className = `flex-1 py-4 rounded-2xl border-2 font-black text-sm flex flex-col items-center btn-active ${!status ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-slate-100 text-slate-300'}`;
-            document.getElementById('btnHasDamage').className = `flex-1 py-4 rounded-2xl border-2 font-black text-sm flex flex-col items-center btn-active ${status ? 'border-red-500 text-red-600 bg-red-50' : 'border-slate-100 text-slate-300'}`;
+            document.getElementById('btnNoDamage').className = `flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap ${!status ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-slate-100 text-slate-300'}`;
+            document.getElementById('btnHasDamage').className = `flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap ${status ? 'border-red-500 text-red-600 bg-red-50' : 'border-slate-100 text-slate-300'}`;
             save();
         }
 
-        function updateStats() {
-            let q = 0, p = 0, d = 0;
-            data.today.forEach(i => { q += Number(i.qty); p += Number(i.plt); if(i.done) d++; });
-            document.getElementById('sumQty').innerText = q;
-            document.getElementById('sumPlt').innerText = p;
-            const pct = data.today.length ? Math.round((d/data.today.length)*100) : 0;
-            document.getElementById('progressText').innerText = `Progress ${pct}%`;
-        }
-
         function save() {
-            localStorage.setItem('wh_v8_data', JSON.stringify(data));
+            localStorage.setItem('wh_v9_data', JSON.stringify(data));
             carStatus.plate = document.getElementById('carPlate').value;
-            localStorage.setItem('wh_v8_car', JSON.stringify(carStatus));
+            localStorage.setItem('wh_v9_car', JSON.stringify(carStatus));
+            document.getElementById('saveStatus').innerText = "Last Saved: " + new Date().toLocaleTimeString();
         }
 
         function prevImg(input) {
@@ -277,17 +272,17 @@
 
         async function shareReport() {
             const plate = document.getElementById('carPlate').value || '未填';
-            const msg = `【移倉助手 V8】\n車牌: ${plate}\n狀況: ${carStatus.hasDamage ? '⚠️有損' : '✅正常'}\n總計: ${document.getElementById('sumQty').innerText} 箱 / ${document.getElementById('sumPlt').innerText} 板\n進度: ${document.getElementById('progressText').innerText}`;
-            if (navigator.share) await navigator.share({ title: 'Warehouse Report', text: msg });
-            else { navigator.clipboard.writeText(msg); alert('報表已複製'); }
+            const msg = `【移倉離場回報 V9】\n車牌: ${plate}\n安檢: ${carStatus.hasDamage ? '⚠️外觀損壞' : '✅正常'}\n----------------\n總計: ${document.getElementById('sumQty').innerText} 箱 / ${document.getElementById('sumPlt').innerText} 板\n明日工作量: ${data.tomorrow.length} 項\n\n(簽單與車體照已存檔)`;
+            if (navigator.share) await navigator.share({ title: 'WH Report', text: msg });
+            else { navigator.clipboard.writeText(msg); alert('報表已複製！'); }
         }
 
         function exportCSV() {
-            let csv = "\ufeffTab,Name,Loc,Exp,PLT,QTY,Status\n";
-            ['today', 'tomorrow'].forEach(t => data[t].forEach(i => csv += `${t},${i.name},${i.loc},${i.exp},${i.plt},${i.qty},${i.done}\n`));
+            let csv = "\ufeff頁籤,品名,ITEM,儲位,有效日期,板數,總箱數,完成\n";
+            ['today', 'tomorrow'].forEach(t => data[t].forEach(i => csv += `${t},${i.name},${i.id||''},${i.loc||''},${i.exp||''},${i.plt},${i.qty},${i.done}\n`));
             const link = document.createElement('a');
             link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-            link.download = `WH_V8_${new Date().getTime()}.csv`; link.click();
+            link.download = `WH_V9_${new Date().getTime()}.csv`; link.click();
         }
     </script>
 </body>
