@@ -3,106 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產風險管理儀表板</title>
+    <title>資產風險管理儀表板 - 含深度解釋</title>
     <style>
         :root {
             --primary: #2563eb; --safe: #10b981; --warn: #f59e0b; --danger: #ef4444;
             --bg: #f1f5f9; --card-bg: #ffffff; --text: #1e293b;
         }
 
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
 
-        /* 頂部導航欄 */
         .navbar { background: var(--primary); color: white; padding: 1rem; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-        .navbar h1 { margin: 0; font-size: 1.25rem; }
+        .navbar h1 { margin: 0; font-size: 1.2rem; }
 
-        .container { max-width: 1000px; margin: 0 auto; padding: 15px; padding-bottom: 80px; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 15px; padding-bottom: 100px; }
 
-        /* 總覽圖卡 */
+        /* 新增：術語解釋區 */
+        .info-section { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.85rem; border-left: 5px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .info-section h3 { margin: 0 0 8px 0; font-size: 0.95rem; display: flex; align-items: center; }
+        .info-section p { margin: 4px 0; color: #475569; line-height: 1.5; }
+        .formula { background: #f8fafc; padding: 8px; border-radius: 6px; font-family: monospace; display: block; margin-top: 5px; color: var(--primary); }
+
         .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
         .summary-card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-        .summary-card h4 { margin: 0; font-size: 0.8rem; color: #64748b; }
-        .summary-card p { margin: 5px 0 0; font-size: 1.1rem; font-weight: bold; }
+        .summary-card h4 { margin: 0; font-size: 0.75rem; color: #64748b; }
+        .summary-card p { margin: 5px 0 0; font-size: 1rem; font-weight: bold; }
 
-        /* 壓力測試滑桿 */
         .stress-box { background: #fffbeb; border: 1px solid #fde68a; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
         .stress-box input[type=range] { width: 100%; margin-top: 10px; }
 
-        /* 資產列表：手機版為卡片，電腦版為表格 */
         .asset-list { display: grid; gap: 15px; }
         .asset-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; border-left: 6px solid #ccc; }
         .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .asset-title { font-weight: bold; font-size: 1.1rem; border: none; border-bottom: 1px dashed #ccc; width: 60%; }
+        .asset-title { font-weight: bold; font-size: 1rem; border: none; border-bottom: 1px dashed #ccc; width: 60%; background: transparent; }
         
         .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .input-group { display: flex; flex-direction: column; }
-        .input-group label { font-size: 0.75rem; color: #64748b; margin-bottom: 4px; }
-        .input-group input { padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 1rem; }
+        .input-group label { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; }
+        .input-group input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; -webkit-appearance: none; }
 
-        .analysis-row { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 12px; font-size: 0.9rem; }
-        .analysis-item { text-align: center; flex: 1; }
-        .analysis-item span { display: block; font-weight: bold; font-size: 1rem; }
+        /* 抗跌數據區 */
+        .analysis-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-top: 12px; }
+        .analysis-item { text-align: left; }
+        .analysis-item span { display: block; font-weight: bold; font-size: 1.1rem; margin-top: 2px; }
+        .analysis-item small { font-size: 0.7rem; color: #64748b; font-weight: normal; }
 
-        /* 安全等級標籤 */
-        .badge { padding: 4px 12px; border-radius: 20px; color: white; font-size: 0.8rem; font-weight: bold; }
+        .badge { padding: 4px 12px; border-radius: 20px; color: white; font-size: 0.75rem; font-weight: bold; }
         
-        /* 懸浮功能按鈕 (FAB) */
-        .fab { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: none; font-size: 24px; cursor: pointer; z-index: 100; }
+        .fab { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); border: none; font-size: 30px; cursor: pointer; z-index: 100; }
 
-        /* 電腦版調整：顯示為並排 */
+        .btn-delete { color: var(--danger); font-size: 0.8rem; background: none; border: none; padding: 0; text-decoration: underline; margin-top: 10px; cursor: pointer; }
+
         @media (min-width: 768px) {
             .summary-grid { grid-template-columns: repeat(4, 1fr); }
             .asset-list { grid-template-columns: repeat(2, 1fr); }
         }
-
-        .actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-        .btn-small { padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 0.85rem; cursor: pointer; }
-        .btn-danger { color: var(--danger); border-color: var(--danger); }
     </style>
 </head>
 <body>
 
 <div class="navbar">
-    <h1>資產風險儀表板</h1>
+    <h1>資產風險監控</h1>
 </div>
 
 <div class="container">
+    <!-- 知識小筆記 -->
+    <div class="info-section">
+        <h3>💡 什麼是「抗跌補繳 %」？</h3>
+        <p>這代表資產價格<strong>還能下跌多少幅度</strong>，才會觸發「還款警戒線」。</p>
+        <p><strong>白話解釋：</strong>若數值為 40%，表示資產價格就算跌掉四成，你都暫時不需要補錢或還款。</p>
+        <div class="formula">
+            公式：1 - ( 借款額 ÷ 警戒線比率 ÷ 目前現值 )
+        </div>
+    </div>
+
     <!-- 總覽數據 -->
     <div class="summary-grid">
         <div class="summary-card"><h4>總借款</h4><p id="totalLoan">0</p></div>
-        <div class="summary-card"><h4>總現值</h4><p id="totalPV">0</p></div>
-        <div class="summary-card"><h4>組合 LTV</h4><p id="avgLTV">0%</p></div>
-        <div class="summary-card"><h4>風險等級</h4><p id="riskLevel">-</p></div>
+        <div class="summary-card"><h4>模擬總現值</h4><p id="totalPV">0</p></div>
+        <div class="summary-card"><h4>整體 LTV</h4><p id="avgLTV">0%</p></div>
+        <div class="summary-card"><h4>狀態</h4><p id="riskLevel">-</p></div>
     </div>
 
     <!-- 壓力測試 -->
     <div class="stress-box">
-        <div style="display: flex; justify-content: space-between; font-weight: bold;">
-            <span>📉 市場集體下跌模擬</span>
+        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem;">
+            <span>📉 市場集體下跌模擬 (壓力測試)</span>
             <span id="crashVal" style="color: var(--danger);">0%</span>
         </div>
         <input type="range" id="marketCrash" min="0" max="60" value="0">
     </div>
 
     <!-- 資產列表 -->
-    <div id="assetList" class="asset-list">
-        <!-- JS 會在這裡動態生成資產卡片 -->
-    </div>
+    <div id="assetList" class="asset-list"></div>
 
-    <div class="actions">
-        <button class="btn-small" onclick="exportJSON()">備份數據</button>
-        <button class="btn-small" onclick="document.getElementById('importFile').click()">匯入數據</button>
-        <button class="btn-small btn-danger" onclick="clearData()">重設資料</button>
+    <div style="margin-top: 30px; text-align: center; font-size: 0.8rem; color: #94a3b8;">
+        <p>※ 資料僅儲存於此瀏覽器，如需換設備請使用「備份」功能</p>
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            <span onclick="exportJSON()" style="color: var(--primary); cursor: pointer;">備份數據</span>
+            <span onclick="document.getElementById('importFile').click()" style="color: var(--primary); cursor: pointer;">匯入備份</span>
+            <span onclick="clearData()" style="color: var(--danger); cursor: pointer;">重設清空</span>
+        </div>
         <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
     </div>
 </div>
 
-<!-- 新增按鈕 -->
 <button class="fab" onclick="addAsset()">+</button>
 
 <script>
-    // 初始資料
-    let assets = JSON.parse(localStorage.getItem('myAssetsMobile')) || [
+    let assets = JSON.parse(localStorage.getItem('myAssetsV3')) || [
         { name: "A保單", pv: 50.6, loan: 15, warn: 0.8, dead: 0.9 },
         { name: "B保單", pv: 155, loan: 50, warn: 0.8, dead: 0.9 },
         { name: "C保單", pv: 203, loan: 79, warn: 0.8, dead: 0.9 },
@@ -126,6 +134,7 @@
         assets.forEach((item, index) => {
             const simPV = item.pv * crashFactor;
             const ltv = (item.loan / simPV) * 100;
+            // 核心公式：1 - (借款 / 警戒比率 / 目前現值)
             const dropWarn = (1 - (item.loan / item.warn / simPV)) * 100;
             
             tLoan += item.loan;
@@ -144,28 +153,25 @@
                     <span class="badge" style="background:${color}">${grade}</span>
                 </div>
                 <div class="grid-inputs">
-                    <div class="input-group">
-                        <label>現值 (萬)</label>
-                        <input type="number" value="${item.pv}" onchange="update(${index}, 'pv', this.value)">
-                    </div>
-                    <div class="input-group">
-                        <label>借款 (萬)</label>
-                        <input type="number" value="${item.loan}" onchange="update(${index}, 'loan', this.value)">
-                    </div>
-                    <div class="input-group">
-                        <label>警戒線 (比)</label>
-                        <input type="number" value="${item.warn}" step="0.1" onchange="update(${index}, 'warn', this.value)">
-                    </div>
-                    <div class="input-group">
-                        <label>斷頭線 (比)</label>
-                        <input type="number" value="${item.dead}" step="0.1" onchange="update(${index}, 'dead', this.value)">
-                    </div>
+                    <div class="input-group"><label>現值 (萬)</label><input type="number" value="${item.pv}" onchange="update(${index}, 'pv', this.value)"></div>
+                    <div class="input-group"><label>借款 (萬)</label><input type="number" value="${item.loan}" onchange="update(${index}, 'loan', this.value)"></div>
+                    <div class="input-group"><label>警戒線比</label><input type="number" value="${item.warn}" step="0.1" onchange="update(${index}, 'warn', this.value)"></div>
+                    <div class="input-group"><label>斷頭線比</label><input type="number" value="${item.dead}" step="0.1" onchange="update(${index}, 'dead', this.value)"></div>
                 </div>
                 <div class="analysis-row">
-                    <div class="analysis-item">LTV<span>${ltv.toFixed(1)}%</span></div>
-                    <div class="analysis-item">抗跌補繳<span>${dropWarn.toFixed(1)}%</span></div>
-                    <div class="analysis-item" onclick="remove(${index})" style="color:var(--danger); cursor:pointer;">刪除</div>
+                    <div class="analysis-item">
+                        <small>借款比 (LTV)</small>
+                        <span>${ltv.toFixed(1)}%</span>
+                    </div>
+                    <div class="analysis-item">
+                        <small>可再跌空間</small>
+                        <span style="color:${dropWarn < 15 ? 'var(--danger)' : 'inherit'}">${dropWarn.toFixed(1)}%</span>
+                    </div>
                 </div>
+                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 8px;">
+                    💡 解釋：以此資產目前的現值，若再下跌 <b>${dropWarn.toFixed(1)}%</b> 就必須補錢。
+                </div>
+                <button class="btn-delete" onclick="remove(${index})">移除此資產</button>
             `;
             list.appendChild(card);
         });
@@ -174,9 +180,9 @@
         document.getElementById('totalPV').innerText = tPV.toFixed(1) + "萬";
         const avgLTV = (tLoan / tPV * 100);
         document.getElementById('avgLTV').innerText = avgLTV.toFixed(1) + "%";
-        document.getElementById('riskLevel').innerText = avgLTV < 40 ? "安全" : (avgLTV < 60 ? "關注" : "危險");
+        document.getElementById('riskLevel').innerText = avgLTV < 40 ? "安全" : (avgLTV < 60 ? "注意" : "警戒");
         
-        localStorage.setItem('myAssetsMobile', JSON.stringify(assets));
+        localStorage.setItem('myAssetsV3', JSON.stringify(assets));
     }
 
     function update(idx, key, val) {
@@ -185,22 +191,22 @@
     }
 
     function addAsset() {
-        assets.push({ name: "新項目", pv: 100, loan: 30, warn: 0.8, dead: 0.9 });
+        assets.push({ name: "新資產", pv: 100, loan: 30, warn: 0.8, dead: 0.9 });
         render();
         window.scrollTo(0, document.body.scrollHeight);
     }
 
     function remove(idx) {
-        if(confirm("確定刪除此資產？")) { assets.splice(idx, 1); render(); }
+        if(confirm("確定移除？")) { assets.splice(idx, 1); render(); }
     }
 
     function clearData() {
-        if(confirm("確定清空所有資料並還原預設？")) { localStorage.removeItem('myAssetsMobile'); location.reload(); }
+        if(confirm("確定還原所有預設值？")) { localStorage.removeItem('myAssetsV3'); location.reload(); }
     }
 
     function exportJSON() {
         const blob = new Blob([JSON.stringify(assets)], {type: 'application/json'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '資產備份.json'; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '資產風險備份.json'; a.click();
     }
 
     function importJSON(e) {
