@@ -3,93 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產風險與歷史壓力測試儀表板</title>
+    <title>資產風險與增貸管家</title>
     <style>
         :root {
-            --primary: #2563eb; --safe: #10b981; --warn: #f59e0b; --danger: #ef4444;
-            --bg: #f8fafc; --text: #1e293b; --accent: #6366f1;
+            /* 暖色系配方 */
+            --primary: #8d6e63;    /* 木質棕 */
+            --bg: #fff9f0;         /* 奶油米白 */
+            --card-bg: #ffffff;
+            --text: #5d4037;       /* 深可可色 */
+            --accent: #d4a373;     /* 暖沙色 */
+            --safe: #6b8e23;       /* 橄欖綠 */
+            --warn: #e9ab17;       /* 蜂蜜黃 */
+            --danger: #cd5c5c;     /* 柔和磚紅 */
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
-        .navbar { background: var(--primary); color: white; padding: 1rem; position: sticky; top: 0; z-index: 100; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .navbar h1 { margin: 0; font-size: 1.1rem; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 12px; padding-bottom: 100px; }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; 
+            background-color: var(--bg); color: var(--text); margin: 0; padding: 0; line-height: 1.5;
+        }
+
+        .navbar { 
+            background: linear-gradient(135deg, #a1887f 0%, #8d6e63 100%); 
+            color: #fff; padding: 1.2rem; position: sticky; top: 0; z-index: 100; text-align: center; 
+            box-shadow: 0 2px 10px rgba(141, 110, 99, 0.2); 
+        }
+        .navbar h1 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 12px; padding-bottom: 120px; }
 
         /* 總覽卡片 */
         .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .summary-card { background: white; padding: 12px; border-radius: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .summary-card h4 { margin: 0; font-size: 0.75rem; color: #64748b; }
-        .summary-card p { margin: 5px 0 0; font-size: 1rem; font-weight: bold; }
+        .summary-card { 
+            background: var(--card-bg); padding: 12px; border-radius: 15px; text-align: center; 
+            box-shadow: 0 4px 6px rgba(141, 110, 99, 0.05); border-bottom: 3px solid var(--accent);
+        }
+        .summary-card h4 { margin: 0; font-size: 0.75rem; color: #a1887f; }
+        .summary-card p { margin: 5px 0 0; font-size: 1.1rem; font-weight: bold; color: var(--primary); }
 
-        /* 壓力測試與歷史按鈕區 */
-        .stress-box { background: #fffbeb; border: 2px solid #fde68a; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .stress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .crash-value { color: var(--danger); font-size: 1.3rem; font-weight: 900; }
+        /* 壓力測試區 */
+        .stress-box { 
+            background: #fdf2e9; border: 2px solid #fae5d3; padding: 18px; border-radius: 20px; 
+            margin-bottom: 20px; box-shadow: 0 4px 12px rgba(212, 163, 115, 0.1); 
+        }
+        .stress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .crash-value { color: var(--danger); font-size: 1.4rem; font-weight: 900; }
         
-        input[type=range] { width: 100%; height: 8px; border-radius: 5px; background: #fef3c7; outline: none; margin: 10px 0; -webkit-appearance: none; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--danger); border: 4px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input[type=range] { width: 100%; height: 8px; border-radius: 5px; background: #edbb99; outline: none; margin: 15px 0; -webkit-appearance: none; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; 
+            background: var(--danger); border: 4px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
+        }
 
-        .history-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
-        .btn-history { background: white; border: 1px solid #fcd34d; padding: 10px 5px; border-radius: 10px; font-size: 0.75rem; cursor: pointer; color: #92400e; font-weight: bold; transition: 0.2s; }
+        .history-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px; }
+        .btn-history { 
+            background: white; border: 1px solid #edbb99; padding: 10px 5px; border-radius: 12px; 
+            font-size: 0.75rem; cursor: pointer; color: #af601a; font-weight: bold; transition: 0.2s;
+        }
         .btn-history span { display: block; font-size: 0.9rem; color: var(--danger); margin-top: 2px; }
-        .btn-history.active { background: #fcd34d; border-color: #b45309; }
+        .btn-history.active { background: #edbb99; color: white; }
 
-        .scenario-desc { background: white; border-radius: 10px; padding: 12px; font-size: 0.85rem; color: #4b5563; line-height: 1.6; border: 1px solid #fef3c7; }
+        .scenario-desc { background: rgba(255,255,255,0.7); border-radius: 12px; padding: 12px; font-size: 0.85rem; color: #845d4d; border: 1px dashed #edbb99; }
 
         /* 資產列表 */
-        .asset-list { display: grid; gap: 15px; }
-        .asset-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 6px solid #ccc; }
-        .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .asset-title { font-weight: bold; font-size: 1rem; border: none; border-bottom: 1px dashed #ccc; width: 50%; background: transparent; }
-        .type-select { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; border: 1px solid #e2e8f0; color: #64748b; }
+        .asset-list { display: grid; gap: 18px; }
+        .asset-card { 
+            background: var(--card-bg); border-radius: 20px; padding: 18px; 
+            box-shadow: 0 6px 15px rgba(141, 110, 99, 0.08); border-top: 5px solid #ccc; 
+        }
+        
+        .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .asset-title { font-weight: bold; font-size: 1.05rem; border: none; border-bottom: 2px dashed #e0e0e0; width: 55%; background: transparent; color: var(--primary); outline: none; }
+        .type-select { font-size: 0.7rem; padding: 4px; border-radius: 8px; border: 1px solid #eee; background: #fafafa; }
 
         .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .input-group label { display: block; font-size: 0.7rem; color: #64748b; margin-bottom: 4px; }
-        .input-group input { width: 90%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; font-weight: 600; }
+        .input-group label { display: block; font-size: 0.7rem; color: #a1887f; margin-bottom: 4px; }
+        .input-group input { width: 90%; padding: 10px; border: 1px solid #f3e5f5; border-radius: 10px; font-size: 1rem; background: #fffcf9; }
 
-        .analysis-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-top: 12px; text-align: center; }
-        .analysis-item small { display: block; font-size: 0.7rem; color: #64748b; margin-bottom: 2px; }
-        .analysis-item span { font-weight: bold; font-size: 1.05rem; }
+        .analysis-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: #fef9f3; padding: 12px; border-radius: 12px; margin-top: 12px; text-align: center; border: 1px solid #fff2e6; }
+        .analysis-item small { display: block; font-size: 0.7rem; color: #a1887f; }
+        .analysis-item span { font-weight: bold; font-size: 1rem; }
 
-        /* 增貸試算區 */
-        .loan-sim-box { margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 12px; }
-        .sim-header { font-size: 0.8rem; font-weight: bold; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+        /* 增貸試算 */
+        .loan-sim-box { margin-top: 15px; border-top: 2px dashed #eee; padding-top: 12px; }
+        .sim-header { font-size: 0.85rem; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
         .sim-row { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
-        .sim-input { width: 50px; padding: 4px; border: 1px solid var(--accent); border-radius: 6px; text-align: center; font-weight: bold; }
-        .sim-result { background: #eef2ff; border-left: 4px solid var(--accent); padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 0.85rem; }
-        .sim-result b { color: var(--primary); font-size: 1rem; }
+        .sim-input { width: 55px; padding: 5px; border: 2px solid var(--accent); border-radius: 8px; text-align: center; font-weight: bold; }
+        .sim-result { background: #fdfaf5; border-left: 5px solid var(--accent); padding: 10px; border-radius: 10px; margin-top: 8px; font-size: 0.85rem; }
 
-        .badge { padding: 4px 10px; border-radius: 20px; color: white; font-size: 0.7rem; font-weight: bold; }
+        .badge { padding: 4px 12px; border-radius: 20px; color: white; font-size: 0.75rem; font-weight: bold; }
         
-        .bottom-actions { margin-top: 30px; display: flex; flex-direction: column; gap: 10px; }
-        .btn-full { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-excel { background: #10b981; color: white; }
-        .btn-backup { background: #64748b; color: white; }
+        /* 底部按鈕區 - 強化導入功能 */
+        .bottom-actions { margin-top: 30px; display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .btn-full { width: 100%; padding: 14px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-excel { background: var(--safe); color: white; }
+        .btn-json-export { background: var(--accent); color: white; }
+        .btn-json-import { background: var(--primary); color: white; }
+        .btn-reset { background: none; color: #a1887f; font-size: 0.8rem; text-decoration: underline; margin-top: 10px; cursor: pointer; border: none; }
 
-        .fab { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); border: none; font-size: 30px; cursor: pointer; z-index: 100; }
+        .fab { position: fixed; bottom: 25px; right: 25px; background: var(--primary); color: white; width: 64px; height: 64px; border-radius: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(141, 110, 99, 0.4); border: none; font-size: 32px; cursor: pointer; z-index: 100; }
 
         @media (min-width: 768px) {
             .summary-grid { grid-template-columns: repeat(4, 1fr); }
             .asset-list { grid-template-columns: repeat(2, 1fr); }
             .history-btns { grid-template-columns: repeat(4, 1fr); }
+            .bottom-actions { grid-template-columns: repeat(3, 1fr); }
         }
     </style>
 </head>
 <body>
 
-<div class="navbar"><h1>資產風險監控 & 增貸試算系統</h1></div>
+<div class="navbar"><h1>🏡 我的資產理財小管家</h1></div>
 
 <div class="container">
     <div class="summary-grid">
-        <div class="summary-card"><h4>總借款</h4><p id="totalLoan">0</p></div>
-        <div class="summary-card"><h4>模擬現值</h4><p id="totalPV">0</p></div>
-        <div class="summary-card"><h4>整體 LTV</h4><p id="avgLTV">0%</p></div>
-        <div class="summary-card"><h4>風險狀態</h4><p id="riskLevel">-</p></div>
+        <div class="summary-card"><h4>總借款額</h4><p id="totalLoan">0</p></div>
+        <div class="summary-card"><h4>模擬總值</h4><p id="totalPV">0</p></div>
+        <div class="summary-card"><h4>整體槓桿</h4><p id="avgLTV">0%</p></div>
+        <div class="summary-card"><h4>健康狀態</h4><p id="riskLevel">-</p></div>
     </div>
 
-    <!-- 歷史壓力測試區 -->
     <div class="stress-box">
         <div class="stress-header">
-            <label>📉 市場下跌模擬測試</label>
+            <label>📉 歷史情境壓力測試</label>
             <span id="crashVal" class="crash-value">0%</span>
         </div>
         <input type="range" id="marketCrash" min="0" max="80" value="0">
@@ -100,30 +135,29 @@
             <button id="btn45" class="btn-history" onclick="setCrash(45)">2000網路<span>-45%</span></button>
             <button id="btn55" class="btn-history" onclick="setCrash(55)">2008海嘯<span>-55%</span></button>
         </div>
-
-        <div id="scenarioDesc" class="scenario-desc">
-            目前狀態：<b>正常波動</b>。請點選歷史情境按鈕進行測試。
-        </div>
+        <div id="scenarioDesc" class="scenario-desc">點擊上方按鈕，預演歷史股災對資產的影響。</div>
     </div>
 
     <div id="assetList" class="asset-list"></div>
 
     <div class="bottom-actions">
         <button class="btn-full btn-excel" onclick="exportExcel()">📊 導出 Excel (CSV)</button>
-        <button class="btn-full btn-backup" onclick="exportJSON()">💾 備份數據 (JSON)</button>
-        <button style="background:none; border:none; color:#94a3b8; text-decoration:underline; font-size:0.8rem; margin-top:10px;" onclick="clearData()">還原預設資產資料</button>
+        <button class="btn-full btn-json-export" onclick="exportJSON()">💾 備份數據 (JSON)</button>
+        <button class="btn-full btn-json-import" onclick="document.getElementById('importFile').click()">📥 匯入備份數據</button>
+        <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
     </div>
+    <button class="btn-reset" onclick="clearData()">還原預設資料設定</button>
 </div>
 
 <button class="fab" onclick="addAsset()">+</button>
 
 <script>
     const descriptions = {
-        0: "目前狀態：<b>正常波動</b>。<br>手動拖動滑桿可測試任意跌幅。",
-        33: "模擬：<b>全球熊市均值 (-33%)</b>。<br>歷史上一般空頭市場的修正深度，是檢視配置韌性的基本門檻。",
-        34: "模擬：<b>2020 新冠肺炎 (-34%)</b>。<br><b>史上最快速崩盤</b>，僅一個月便修正三成。測試你在極短時間內的應變能力。",
-        45: "模擬：<b>2000 網路泡沫 (-45%)</b>。<br><b>科技股修正劇烈</b>。若股票質押集中在科技股，此情境最具參考價值。",
-        55: "模擬：<b>2008 金融海嘯 (-55%)</b>。<br><b>全球系統性風險</b>。市場幾乎所有資產集體大幅下挫，測試資產的生存極限。"
+        0: "目前狀態：<b>市場平穩</b>。手動拖動滑桿可測試跌幅空間。",
+        33: "情境：<b>全球熊市均值 (-33%)</b>。<br>歷史常見的空頭回檔。這是一個穩健配置應具備的抗性門檻。",
+        34: "情境：<b>2020 新冠肺炎 (-34%)</b>。<br>史上最快速崩盤，僅用一個月便大幅修正。測試短時間內的流動性。",
+        45: "情境：<b>2000 網路泡沫 (-45%)</b>。<br>科技股修正劇烈。若持股集中於電子成長股，此數值最具參考價值。",
+        55: "情境：<b>2008 金融海嘯 (-55%)</b>。<br>全球系統性風險。極端情境，測試資產配置的『極限存活能力』。"
     };
 
     const defaultAssets = [
@@ -134,7 +168,7 @@
         { name: "股票質押", pv: 240, loan: 50, warn: 133, type: 'stock', simTarget: 30 }
     ];
 
-    let assets = JSON.parse(localStorage.getItem('myFinalAssets')) || defaultAssets;
+    let assets = JSON.parse(localStorage.getItem('myFinalWarmAssets')) || defaultAssets;
 
     const slider = document.getElementById('marketCrash');
     slider.oninput = () => { updateUI(slider.value); };
@@ -148,7 +182,7 @@
         document.getElementById('crashVal').innerText = val + "%";
         document.querySelectorAll('.btn-history').forEach(b => b.classList.remove('active'));
         if (document.getElementById('btn' + val)) document.getElementById('btn' + val).classList.add('active');
-        document.getElementById('scenarioDesc').innerHTML = descriptions[val] || `目前模擬：<b>自定義跌幅 (${val}%)</b>`;
+        document.getElementById('scenarioDesc').innerHTML = descriptions[val] || `自定義模擬：<b>市場下跌 ${val}%</b>`;
         render();
     }
 
@@ -164,7 +198,6 @@
             const mRatio = (simPV / item.loan) * 100;
             let drop = item.type === 'stock' ? (1 - (item.loan * (item.warn/100) / simPV)) * 100 : (1 - (item.loan / item.warn / simPV)) * 100;
             
-            // 增貸模擬 (基於原始現值)
             const targetLoan = item.pv * (item.simTarget / 100);
             const extraSpace = targetLoan - item.loan;
 
@@ -175,7 +208,7 @@
             else if (ltv > 40 || drop < 25) { color = "var(--warn)"; grade = "B級"; }
 
             const card = document.createElement('div');
-            card.className = 'asset-card'; card.style.borderLeftColor = color;
+            card.className = 'asset-card'; card.style.borderTopColor = color;
             card.innerHTML = `
                 <div class="asset-header">
                     <input class="asset-title" value="${item.name}" onchange="update(${index}, 'name', this.value)">
@@ -187,31 +220,27 @@
                 </div>
                 <div class="grid-inputs">
                     <div class="input-group"><label>目前現值(萬)</label><input type="number" value="${item.pv}" onchange="update(${index}, 'pv', this.value)"></div>
-                    <div class="input-group"><label>借款額度(萬)</label><input type="number" value="${item.loan}" onchange="update(${index}, 'loan', this.value)"></div>
-                    <div class="input-group"><label>${item.type==='stock'?'維持率門檻%':'警戒線比例'}</label><input type="number" value="${item.warn}" onchange="update(${index}, 'warn', this.value)"></div>
-                    <div class="input-group"><label>模擬 LTV</label><input type="text" value="${ltv.toFixed(1)}%" disabled style="background:#f1f5f9"></div>
+                    <div class="input-group"><label>已借額(萬)</label><input type="number" value="${item.loan}" onchange="update(${index}, 'loan', this.value)"></div>
+                    <div class="input-group"><label>${item.type==='stock'?'補繳維持率%':'警戒比率'}</label><input type="number" value="${item.warn}" onchange="update(${index}, 'warn', this.value)"></div>
+                    <div class="input-group"><label>模擬槓桿</label><input type="text" value="${ltv.toFixed(1)}%" disabled style="background:#fffcf9"></div>
                 </div>
                 <div class="analysis-row">
-                    <div class="analysis-item"><small>模擬維持率</small><span>${mRatio.toFixed(0)}%</span></div>
-                    <div class="analysis-item"><small>抗跌空間</small><span style="color:${drop < 15 ? 'var(--danger)' : 'inherit'}">${drop.toFixed(1)}%</span></div>
+                    <div class="analysis-item"><small>維持率</small><span>${mRatio.toFixed(0)}%</span></div>
+                    <div class="analysis-item"><small>剩餘跌幅</small><span style="color:${drop < 15 ? 'var(--danger)' : 'var(--text)'}">${drop.toFixed(1)}%</span></div>
                 </div>
-
                 <div class="loan-sim-box">
                     <div class="sim-header">📈 增貸模擬試算</div>
                     <div class="sim-row">
-                        <span>預計借到現值的：</span>
+                        <span>預計借到總值的：</span>
                         <input type="number" class="sim-input" value="${item.simTarget}" onchange="update(${index}, 'simTarget', this.value)">
                         <span> %</span>
                     </div>
                     <div class="sim-result">
-                        ${extraSpace > 0 ? 
-                            `可增貸金額：<b>${extraSpace.toFixed(1)}</b> 萬` : 
-                            `<span style="color:var(--danger)">⚠️ 目前已借超過此目標</span>`
-                        }
+                        ${extraSpace > 0 ? `可增貸：<b>${extraSpace.toFixed(1)}</b> 萬` : `<span style="color:var(--danger)">已超過目標</span>`}
                         <br><small>目標總借款額：${targetLoan.toFixed(1)} 萬</small>
                     </div>
                 </div>
-                <div style="font-size:0.65rem; color:#cbd5e1; margin-top:10px; text-align:right; cursor:pointer;" onclick="remove(${index})">移除 ✕</div>
+                <div style="font-size:0.65rem; color:#d2b48c; margin-top:10px; text-align:right; cursor:pointer;" onclick="remove(${index})">移除 ✕</div>
             `;
             list.appendChild(card);
         });
@@ -221,7 +250,7 @@
         const avg = (tLoan / tPV * 100);
         document.getElementById('avgLTV').innerText = avg.toFixed(1) + "%";
         document.getElementById('riskLevel').innerText = avg < 40 ? "穩定" : "警戒";
-        localStorage.setItem('myFinalAssets', JSON.stringify(assets));
+        localStorage.setItem('myFinalWarmAssets', JSON.stringify(assets));
     }
 
     function update(idx, k, v) {
@@ -238,29 +267,35 @@
 
     function addAsset() { assets.push({ name: "新項目", pv: 100, loan: 0, warn: 0.9, type: 'general', simTarget: 30 }); render(); }
     function remove(idx) { if(confirm("移除項目？")) { assets.splice(idx, 1); render(); } }
-    function clearData() { if(confirm("重設？")) { localStorage.removeItem('myFinalAssets'); location.reload(); } }
+    function clearData() { if(confirm("重設？")) { localStorage.removeItem('myFinalWarmAssets'); location.reload(); } }
 
     function exportExcel() {
-        let csv = "\ufeff資產名稱,模式,現值,借款,門檻,LTV,抗跌幅,可增貸額\n";
+        let csv = "\ufeff資產名稱,模式,現值,借款,門檻,LTV,維持率,增貸空間\n";
         assets.forEach(i => {
-            const ltv = ((i.loan/i.pv)*100).toFixed(1) + "%";
             const extra = (i.pv * i.simTarget / 100) - i.loan;
-            let d = i.type === 'stock' ? (1-(i.loan*i.warn/100/i.pv)) : (1-(i.loan/i.warn/i.pv));
-            csv += [i.name, i.type, i.pv, i.loan, i.warn, ltv, (d*100).toFixed(1)+'%', extra.toFixed(1)].join(",") + "\n";
+            csv += [i.name, i.type, i.pv, i.loan, i.warn, ((i.loan/i.pv)*100).toFixed(1)+'%', ((i.pv/i.loan)*100).toFixed(0)+'%', extra.toFixed(1)].join(",") + "\n";
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `資產風險與增貸報告_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `資產報告.csv`; a.click();
     }
 
     function exportJSON() {
         const b = new Blob([JSON.stringify(assets)], {type: 'application/json'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = '資產數據備份.json'; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = '資產備份.json'; a.click();
     }
 
     function importJSON(e) {
-        const r = new FileReader();
-        r.onload = (ev) => { assets = JSON.parse(ev.target.result); render(); };
-        r.readAsText(e.target.files[0]);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                assets = JSON.parse(ev.target.result);
+                render();
+                alert("數據匯入成功！");
+            } catch (err) {
+                alert("匯入失敗，請確認檔案格式是否正確。");
+            }
+        };
+        reader.readAsText(e.target.files[0]);
     }
 
     window.onload = render;
