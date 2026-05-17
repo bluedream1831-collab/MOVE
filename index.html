@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產風險監控儀表板 - 實戰版</title>
+    <title>資產風險監控 - 歷史回測版</title>
     <style>
         :root {
             --primary: #2563eb; --safe: #10b981; --warn: #f59e0b; --danger: #ef4444;
@@ -20,14 +20,20 @@
         .summary-card h4 { margin: 0; font-size: 0.75rem; color: #64748b; }
         .summary-card p { margin: 5px 0 0; font-size: 1rem; font-weight: bold; }
 
-        /* 壓力測試 */
+        /* 壓力測試區塊 */
         .stress-box { background: #fffbeb; border: 1px solid #fde68a; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        .stress-box input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; }
+        .stress-box label { display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; }
+        .stress-box input[type=range] { width: 100%; margin-top: 5px; cursor: pointer; }
+        
+        /* 歷史快選按鈕 */
+        .history-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
+        .btn-history { background: white; border: 1px solid #fcd34d; padding: 8px 4px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; color: #92400e; font-weight: bold; transition: all 0.2s; }
+        .btn-history:active { background: #fef3c7; transform: scale(0.95); }
+        .btn-history span { display: block; font-size: 0.85rem; color: var(--danger); }
 
         /* 資產列表 */
         .asset-list { display: grid; gap: 15px; }
-        .asset-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 6px solid #ccc; position: relative; }
-        
+        .asset-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 6px solid #ccc; }
         .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .asset-title { font-weight: bold; font-size: 1rem; border: none; border-bottom: 1px dashed #ccc; width: 55%; background: transparent; outline: none; }
         .type-select { font-size: 0.75rem; padding: 4px; border-radius: 6px; border: 1px solid #ddd; background: #fff; }
@@ -43,12 +49,11 @@
 
         .badge { padding: 4px 12px; border-radius: 20px; color: white; font-size: 0.75rem; font-weight: bold; }
         
-        /* 底部按鈕區 */
         .bottom-actions { margin-top: 30px; display: flex; flex-direction: column; gap: 10px; }
         .btn-full { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
         .btn-excel { background: #10b981; color: white; }
         .btn-backup { background: #64748b; color: white; }
-        .btn-clear { background: none; color: #94a3b8; font-size: 0.8rem; text-decoration: underline; }
+        .btn-clear { background: none; color: #94a3b8; font-size: 0.8rem; text-decoration: underline; margin-bottom: 20px; }
 
         .fab { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); border: none; font-size: 30px; cursor: pointer; z-index: 100; }
 
@@ -72,12 +77,19 @@
         <div class="summary-card"><h4>總體狀態</h4><p id="riskLevel">-</p></div>
     </div>
 
+    <!-- 壓力測試區塊 (新增歷史快選) -->
     <div class="stress-box">
-        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem;">
-            <span>📉 市場集體下跌模擬</span>
-            <span id="crashVal" style="color: var(--danger);">0%</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label>📉 市場集體下跌模擬</label>
+            <span id="crashVal" style="color: var(--danger); font-weight: bold; font-size: 1.1rem;">0%</span>
         </div>
-        <input type="range" id="marketCrash" min="0" max="60" value="0">
+        <input type="range" id="marketCrash" min="0" max="80" value="0">
+        
+        <div class="history-btns">
+            <button class="btn-history" onclick="setCrash(33)">熊市均值<span>-33%</span></button>
+            <button class="btn-history" onclick="setCrash(45)">2000 網路泡沫<span>-45%</span></button>
+            <button class="btn-history" onclick="setCrash(55)">2008 金融海嘯<span>-55%</span></button>
+        </div>
     </div>
 
     <div id="assetList" class="asset-list"></div>
@@ -88,7 +100,7 @@
             <button class="btn-full btn-backup" style="flex:1" onclick="exportJSON()">💾 備份數據</button>
             <button class="btn-full btn-backup" style="flex:1" onclick="document.getElementById('importFile').click()">📥 匯入數據</button>
         </div>
-        <button class="btn-clear" onclick="clearData()">還原預設資料</button>
+        <button class="btn-clear" onclick="clearData()">重設回預設項目</button>
         <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
     </div>
 </div>
@@ -105,13 +117,19 @@
         { name: "股票質押", pv: 240, loan: 50, warn: 133, type: 'stock' }
     ];
 
-    let assets = JSON.parse(localStorage.getItem('myAssetsV5')) || defaultAssets;
+    let assets = JSON.parse(localStorage.getItem('myAssetsV6')) || defaultAssets;
 
     const crashSlider = document.getElementById('marketCrash');
     crashSlider.oninput = () => {
         document.getElementById('crashVal').innerText = crashSlider.value + "%";
         render();
     };
+
+    function setCrash(val) {
+        crashSlider.value = val;
+        document.getElementById('crashVal').innerText = val + "%";
+        render();
+    }
 
     function render() {
         const list = document.getElementById('assetList');
@@ -161,7 +179,7 @@
                     <div class="input-group"><label>目前 LTV</label><input type="text" value="${ltv.toFixed(1)}%" disabled style="background:#f1f5f9"></div>
                 </div>
                 <div class="analysis-row">
-                    <div class="analysis-item"><small>${item.type==='stock'?'目前維持率':'目前維持率'}</small><span>${mRatio.toFixed(0)}%</span></div>
+                    <div class="analysis-item"><small>目前維持率</small><span>${mRatio.toFixed(0)}%</span></div>
                     <div class="analysis-item"><small>抗跌空間</small><span style="color:${dropWarn < 15 ? 'var(--danger)' : 'inherit'}">${dropWarn.toFixed(1)}%</span></div>
                 </div>
                 <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; text-align: right; cursor: pointer;" onclick="remove(${index})">移除項目 ✕</div>
@@ -173,9 +191,9 @@
         document.getElementById('totalPV').innerText = tPV.toFixed(0) + "萬";
         const avgLTV = (tLoan / tPV * 100);
         document.getElementById('avgLTV').innerText = avgLTV.toFixed(1) + "%";
-        document.getElementById('riskLevel').innerText = avgLTV < 40 ? "穩定" : (avgLTV < 60 ? "注意" : "高槓桿");
+        document.getElementById('riskLevel').innerText = avgLTV < 40 ? "穩定" : (avgLTV < 60 ? "注意" : "危險");
         
-        localStorage.setItem('myAssetsV5', JSON.stringify(assets));
+        localStorage.setItem('myAssetsV6', JSON.stringify(assets));
     }
 
     function update(idx, key, val) {
@@ -200,41 +218,21 @@
     }
 
     function clearData() {
-        if(confirm("確定還原所有預設值？")) { localStorage.removeItem('myAssetsV5'); location.reload(); }
+        if(confirm("確定還原所有預設值？")) { localStorage.removeItem('myAssetsV6'); location.reload(); }
     }
 
-    // 導出 Excel (CSV 格式)
     function exportExcel() {
         let csvContent = "\ufeff資產名稱,模式,目前現值(萬),借款金額(萬),門檻值,當前LTV,當前維持率,抗跌幅空間\n";
-        
         assets.forEach(item => {
             const ltv = ((item.loan / item.pv) * 100).toFixed(2) + "%";
             const mRatio = ((item.pv / item.loan) * 100).toFixed(0) + "%";
-            let drop = 0;
-            if (item.type === 'stock') {
-                drop = (1 - (item.loan * (item.warn / 100) / item.pv)) * 100;
-            } else {
-                drop = (1 - (item.loan / item.warn / item.pv)) * 100;
-            }
-            
-            const row = [
-                item.name,
-                item.type === 'stock' ? '股票(維持率)' : '保單(比例)',
-                item.pv,
-                item.loan,
-                item.warn,
-                ltv,
-                mRatio,
-                drop.toFixed(2) + "%"
-            ].join(",");
-            csvContent += row + "\n";
+            let drop = item.type === 'stock' ? (1 - (item.loan * (item.warn / 100) / item.pv)) * 100 : (1 - (item.loan / item.warn / item.pv)) * 100;
+            csvContent += [item.name, item.type === 'stock' ? '股票(維持率)' : '保單(比例)', item.pv, item.loan, item.warn, ltv, mRatio, drop.toFixed(2) + "%"].join(",") + "\n";
         });
-
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        const date = new Date().toISOString().slice(0, 10);
         link.href = URL.createObjectURL(blob);
-        link.download = `資產風險報告_${date}.csv`;
+        link.download = `資產風險報告_${new Date().toISOString().slice(0, 10)}.csv`;
         link.click();
     }
 
