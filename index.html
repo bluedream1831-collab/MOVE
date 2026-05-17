@@ -1,289 +1,223 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉助手 V9 - 智慧搜尋版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>終極資產風險管理系統</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        body { font-family: 'Lexend', 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+        :root { --primary: #2c3e50; --safe: #27ae60; --warn: #f39c12; --danger: #e74c3c; --bg: #f8f9fa; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1400px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         
-        /* 手機按鈕反饋 */
-        .btn-tap:active { transform: scale(0.95); opacity: 0.9; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         
-        /* 隱藏卷軸 */
-        ::-webkit-scrollbar { display: none; }
+        /* 按鈕樣式 */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
+        .btn-add { background: var(--primary); }
+        .btn-save { background: var(--safe); }
+        .btn-export { background: #3498db; }
+        .btn-import { background: #9b59b6; }
+        .btn-danger { background: var(--danger); }
+        .btn:hover { opacity: 0.8; }
 
-        /* 狀態樣式 */
-        .card-done { background-color: #f0fdf4 !important; border-left: 10px solid #22c55e !important; opacity: 0.7; }
-        .card-pending { border-left: 10px solid #4f46e5; }
-
-        /* 全螢幕搜尋遮罩 */
-        #searchModal { transition: transform 0.3s ease-out; transform: translateY(100%); }
-        #searchModal.active { transform: translateY(0); }
+        /* 壓力測試滑桿 */
+        .stress-test { background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeeba; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: var(--primary); color: white; padding: 12px; font-size: 0.9em; position: sticky; top: 0; }
+        td { border: 1px solid #eee; padding: 8px; text-align: center; }
+        input { width: 85%; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
+        
+        /* 數值高亮 */
+        .val-ltv { color: #2980b9; font-weight: bold; }
+        .val-warn { color: #d35400; font-weight: bold; }
+        .badge { padding: 4px 10px; border-radius: 12px; color: white; font-size: 0.8em; }
+        
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .summary-card { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd; text-align: center; }
+        .summary-card h4 { margin: 0; color: #7f8c8d; font-size: 0.9em; }
+        .summary-card p { margin: 5px 0 0; font-size: 1.4em; font-weight: bold; color: var(--primary); }
     </style>
 </head>
-<body class="pb-44 overflow-x-hidden">
+<body>
 
-    <!-- 頂部選單 -->
-    <header class="bg-slate-900 text-white sticky top-0 z-40 p-4 shadow-xl">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-xl font-black italic tracking-tighter text-indigo-400">WH-ASSIST <span class="text-white">V9</span></h1>
-            <div id="saveStatus" class="text-[9px] bg-slate-800 px-3 py-1 rounded-full font-bold uppercase tracking-widest text-slate-400">Ready</div>
-        </div>
-        <div class="flex bg-slate-800 rounded-2xl p-1 gap-1">
-            <button onclick="switchTab('today')" id="tabToday" class="flex-1 py-3 text-sm rounded-xl font-black transition-all bg-slate-700 text-white shadow-sm">今日作業</button>
-            <button onclick="switchTab('tomorrow')" id="tabTomorrow" class="flex-1 py-3 text-sm rounded-xl font-black transition-all text-slate-500">明日預排</button>
-        </div>
-    </header>
+<div class="container">
+    <div class="header-flex">
+        <h1>資產風險監控與壓力測試系統</h1>
+        <div id="saveStatus" style="color: var(--safe); font-weight: bold;">● 資料已自動儲存</div>
+    </div>
 
-    <main class="max-w-md mx-auto p-4 space-y-4">
+    <!-- 數據概覽 -->
+    <div class="summary-grid">
+        <div class="summary-card"><h4>總現值</h4><p id="totalPV">0</p></div>
+        <div class="summary-card"><h4>總借款</h4><p id="totalLoan">0</p></div>
+        <div class="summary-card"><h4>整體 LTV</h4><p id="avgLTV">0%</p></div>
+        <div class="summary-card"><h4>風險資產比例</h4><p id="riskRatio" style="color: var(--danger);">0%</p></div>
+    </div>
+
+    <!-- 壓力測試 -->
+    <div class="stress-test">
+        <strong>🔥 市場壓力測試模擬：</strong> 假設市場集體下跌 
+        <input type="range" id="marketCrash" min="0" max="60" value="0" style="width: 200px; vertical-align: middle;">
+        <span id="crashVal" style="color: var(--danger); font-size: 1.2em; font-weight: bold;">0%</span>
+        <span style="margin-left: 15px; font-size: 0.9em; color: #666;">(模擬價格波動對安全等級的影響)</span>
+    </div>
+
+    <!-- 工具欄 -->
+    <div class="toolbar">
+        <button class="btn btn-add" onclick="addRow()">+ 新增項目</button>
+        <button class="btn btn-export" onclick="exportExcel()">匯出 CSV (Excel)</button>
+        <button class="btn btn-export" onclick="exportJSON()">備份資料 (JSON)</button>
+        <button class="btn btn-import" onclick="document.getElementById('importFile').click()">匯入資料</button>
+        <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
+        <button class="btn btn-danger" onclick="clearAll()" style="margin-left: auto;">清空所有資料</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="12%">資產名稱</th>
+                <th width="10%">原始現值(萬)</th>
+                <th width="10%">模擬現值(萬)</th>
+                <th width="10%">借款額(萬)</th>
+                <th width="8%">警戒線比</th>
+                <th width="8%">斷頭線比</th>
+                <th width="8%">LTV%</th>
+                <th width="10%">抗跌補繳%</th>
+                <th width="12%">安全等級</th>
+                <th width="6%">操作</th>
+            </tr>
+        </thead>
+        <tbody id="assetBody"></tbody>
+    </table>
+</div>
+
+<script>
+    let assets = JSON.parse(localStorage.getItem('myAssets')) || [
+        { name: "A保單", pv: 50.6, loan: 15, warn: 0.8, dead: 0.9 },
+        { name: "B保單", pv: 155, loan: 50, warn: 0.8, dead: 0.9 },
+        { name: "C保單", pv: 203, loan: 79, warn: 0.8, dead: 0.9 },
+        { name: "D保單", pv: 400, loan: 100, warn: 0.6, dead: 0.7 },
+        { name: "股票質押", pv: 240, loan: 50, warn: 0.7, dead: 0.8 }
+    ];
+
+    const crashSlider = document.getElementById('marketCrash');
+    crashSlider.oninput = function() {
+        document.getElementById('crashVal').innerText = this.value + "%";
+        renderTable();
+    };
+
+    function renderTable() {
+        const tbody = document.getElementById("assetBody");
+        const crashPercent = parseFloat(crashSlider.value) / 100;
+        tbody.innerHTML = "";
+
+        let totalPV = 0;
+        let totalLoan = 0;
+        let riskCount = 0;
+
+        assets.forEach((item, index) => {
+            const simulatedPV = item.pv * (1 - crashPercent);
+            const ltv = (item.loan / simulatedPV) * 100;
+            const dropWarn = (1 - (item.loan / item.warn / item.pv)) * 100; // 基準以原始現值算
+            const currentDropWarn = (1 - (item.loan / item.warn / simulatedPV)) * 100; // 模擬下的剩餘空間
+
+            totalPV += simulatedPV;
+            totalLoan += item.loan;
+
+            let grade = "A級";
+            let badgeCls = "var(--safe)";
+            if (ltv >= 60 || currentDropWarn <= 0) {
+                grade = "C級 (補繳/斷頭)"; badgeCls = "var(--danger)"; riskCount++;
+            } else if (ltv > 40 || currentDropWarn < 25) {
+                grade = "B級 (中風險)"; badgeCls = "var(--warn)";
+            }
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><input type="text" value="${item.name}" onchange="updateData(${index}, 'name', this.value)"></td>
+                <td><input type="number" value="${item.pv}" onchange="updateData(${index}, 'pv', this.value)"></td>
+                <td style="background:#fef9e7">${simulatedPV.toFixed(1)}</td>
+                <td><input type="number" value="${item.loan}" onchange="updateData(${index}, 'loan', this.value)"></td>
+                <td><input type="number" value="${item.warn}" step="0.1" onchange="updateData(${index}, 'warn', this.value)"></td>
+                <td><input type="number" value="${item.dead}" step="0.1" onchange="updateData(${index}, 'dead', this.value)"></td>
+                <td class="val-ltv">${ltv.toFixed(1)}%</td>
+                <td class="val-warn">${currentDropWarn.toFixed(1)}%</td>
+                <td><span class="badge" style="background:${badgeCls}">${grade}</span></td>
+                <td><button class="btn btn-danger" style="padding:2px 5px" onclick="deleteRow(${index})">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 更新概覽
+        document.getElementById('totalPV').innerText = totalPV.toFixed(1) + " 萬";
+        document.getElementById('totalLoan').innerText = totalLoan.toFixed(1) + " 萬";
+        document.getElementById('avgLTV').innerText = ((totalLoan/totalPV)*100).toFixed(1) + "%";
+        document.getElementById('riskRatio').innerText = ((riskCount/assets.length)*100).toFixed(0) + "%";
         
-        <!-- 車輛安檢 -->
-        <section id="sectionVehicle" class="bg-white rounded-[32px] p-6 shadow-sm space-y-4 border border-slate-100">
-            <div class="flex justify-between items-center">
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Vehicle Info</span>
-                <input type="text" id="carPlate" placeholder="輸入車牌" class="text-right text-xl font-black text-indigo-600 focus:outline-none w-1/2 uppercase">
-            </div>
-            <div class="flex gap-2">
-                <button onclick="setDamage(false)" id="btnNoDamage" class="flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap border-indigo-600 text-indigo-600 bg-indigo-50/50">✅ 外觀正常</button>
-                <button onclick="setDamage(true)" id="btnHasDamage" class="flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap border-slate-100 text-slate-300">⚠️ 凹損/凹箱</button>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-                <label class="bg-slate-50 rounded-2xl h-16 flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
-                    <span class="text-[9px] font-bold text-slate-400">📷 車頭</span><input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
-                </label>
-                <label class="bg-slate-50 rounded-2xl h-16 flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
-                    <span class="text-[9px] font-bold text-slate-400">📷 損壞</span><input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
-                </label>
-                <label class="bg-slate-50 rounded-2xl h-16 flex items-center justify-center border-2 border-dashed border-slate-200 relative overflow-hidden">
-                    <span class="text-[9px] font-bold text-slate-400">📷 單據</span><input type="file" capture="environment" class="hidden" onchange="prevImg(this)">
-                </label>
-            </div>
-        </section>
+        localStorage.setItem('myAssets', JSON.stringify(assets));
+    }
 
-        <!-- 商品清單 -->
-        <div id="itemList" class="space-y-4 pb-12">
-            <!-- JS 動態生成 -->
-        </div>
+    function updateData(index, key, value) {
+        assets[index][key] = key === 'name' ? value : parseFloat(value);
+        renderTable();
+    }
 
-    </main>
+    function addRow() {
+        assets.push({ name: "新資產", pv: 100, loan: 30, warn: 0.8, dead: 0.9 });
+        renderTable();
+    }
 
-    <!-- 底部控制面板 -->
-    <div class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto bg-white/90 backdrop-blur-lg p-6 rounded-t-[40px] shadow-[0_-15px_35px_rgba(0,0,0,0.1)] border-t border-slate-100">
-        <div class="flex justify-around items-center mb-5">
-            <div class="text-center"><p class="text-[9px] font-black text-slate-400 uppercase mb-1">Total BOX</p><b class="text-3xl font-black text-indigo-600 leading-none" id="sumQty">0</b></div>
-            <div class="h-8 w-[1px] bg-slate-100"></div>
-            <div class="text-center"><p class="text-[9px] font-black text-slate-400 uppercase mb-1">Total PLT</p><b class="text-3xl font-black text-emerald-500 leading-none" id="sumPlt">0</b></div>
-        </div>
-        <div class="flex gap-3">
-            <button onclick="addItem()" class="flex-1 bg-slate-900 text-white py-5 rounded-3xl font-black text-sm btn-tap shadow-lg shadow-slate-200">＋新增</button>
-            <button onclick="shareReport()" class="flex-[2] bg-indigo-600 text-white py-5 rounded-3xl font-black text-md btn-tap shadow-xl shadow-indigo-100">🚀 發送回報</button>
-            <button onclick="exportCSV()" class="w-14 bg-slate-100 text-slate-400 py-5 rounded-3xl font-black text-xs btn-tap text-center">CSV</button>
-        </div>
-    </div>
+    function deleteRow(index) {
+        if(confirm("確定刪除？")) {
+            assets.splice(index, 1);
+            renderTable();
+        }
+    }
 
-    <!-- ================= 智慧搜尋遮罩 (Search Modal) ================= -->
-    <div id="searchModal" class="fixed inset-0 bg-white z-[100] flex flex-col p-4 shadow-2xl">
-        <div class="flex items-center gap-3 mb-4">
-            <button onclick="closeSearch()" class="p-2 text-slate-400 text-2xl">✕</button>
-            <input type="text" id="searchInput" oninput="filterSearch(this.value)" placeholder="輸入名稱或 ITEM 編號搜尋..." class="flex-1 p-4 bg-slate-100 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div id="searchResults" class="flex-1 overflow-y-auto space-y-2 pb-10 px-1">
-            <!-- 搜尋結果 -->
-        </div>
-        <button onclick="useCustomName()" class="w-full py-4 bg-slate-100 text-slate-500 font-bold rounded-2xl mt-2 italic text-sm underline">+ 使用自定義品名輸入</button>
-    </div>
+    // 匯出 CSV (Excel)
+    function exportExcel() {
+        let csv = "\ufeff項目名稱,原始現值,借款額,警戒比率,斷頭比率,LTV%\n";
+        assets.forEach(a => {
+            csv += `${a.name},${a.pv},${a.loan},${a.warn},${a.dead},${((a.loan/a.pv)*100).toFixed(1)}%\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "資產風險報告.csv";
+        link.click();
+    }
 
-    <script>
-        // 資料庫 (來自圖片)
-        const masterData = [
-            { id: "24601003001", name: "冷凍美國CR安格斯牛五花火鍋片", qpp: 30, loc: "1C2903", exp: "20261222" },
-            { id: "24200002001", name: "威保 - 冷凍紐西蘭 - 全羊火鍋肉", qpp: 30, loc: "1C3303", exp: "20270202" },
-            { id: "24600105001", name: "立大冷凍豬五花火鍋肉片1000G", qpp: 50, loc: "3B0301", exp: "20270130" },
-            { id: "23904988001", name: "立基 - 冷凍9吋 油酥厚餅", qpp: 28, loc: "3B0501", exp: "20270128" },
-            { id: "24200074001", name: "舍利蓮冷凍紐西蘭小羔羊梅花肉", qpp: 49, loc: "3B1301", exp: "20270131" },
-            { id: "24600005001", name: "思牧 - 冷凍豬五花火鍋片500G", qpp: 35, loc: "3B1401", exp: "20270210" },
-            { id: "23904009001", name: "泉泓起酥蛋糕(家庭號)", qpp: 24, loc: "3B3901", exp: "20260901" },
-            { id: "24601107001", name: "美國CR安格斯牛 五花火鍋片1", qpp: 32, loc: "3B4102", exp: "20261218" },
-            { id: "23904125001", name: "泉泓冷凍蜂蜜蛋糕", qpp: 28, loc: "3B4702", exp: "20260902" },
-            { id: "23904040001", name: "泉泓起酥蛋糕", qpp: 28, loc: "3B4801", exp: "20260903" },
-            { id: "24601108001", name: "舍利蓮冷凍澳洲穀飼 - 牛雪花肉", qpp: 49, loc: "4B0701", exp: "20270131" },
-            { id: "24600001001", name: "思牧 - 冷凍豬梅花火鍋片500G", qpp: 35, loc: "4B1401", exp: "20270210" },
-            { id: "24920267001", name: "威保 - 美國冷凍去骨腿排", qpp: 42, loc: "4B1802", exp: "20270202" }
-        ];
+    // 匯出 JSON
+    function exportJSON() {
+        const data = JSON.stringify(assets, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "資產備份.json";
+        link.click();
+    }
 
-        let currentTab = 'today';
-        let data = { today: [], tomorrow: [] };
-        let carStatus = { plate: '', hasDamage: false };
-        let activeIdx = null; // 當前正在編輯的品項索引
-
-        window.onload = () => {
-            const savedData = localStorage.getItem('wh_v9_data');
-            if (savedData) data = JSON.parse(savedData);
-            const savedCar = localStorage.getItem('wh_v9_car');
-            if (savedCar) {
-                carStatus = JSON.parse(savedCar);
-                document.getElementById('carPlate').value = carStatus.plate;
-                setDamage(carStatus.hasDamage);
-            }
-            renderList();
+    // 匯入 JSON
+    function importJSON(event) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            assets = JSON.parse(e.target.result);
+            renderTable();
         };
+        reader.readAsText(event.target.files[0]);
+    }
 
-        function switchTab(tab) {
-            currentTab = tab;
-            const isT = tab === 'today';
-            document.getElementById('tabToday').className = isT ? "flex-1 py-3 text-sm rounded-xl font-black bg-slate-700 text-white shadow-sm" : "flex-1 py-3 text-sm rounded-xl font-black text-slate-500";
-            document.getElementById('tabTomorrow').className = !isT ? "flex-1 py-3 text-sm rounded-xl font-black bg-slate-700 text-white shadow-sm" : "flex-1 py-3 text-sm rounded-xl font-black text-slate-500";
-            document.getElementById('sectionVehicle').classList.toggle('hidden', !isT);
-            renderList();
+    function clearAll() {
+        if(confirm("這將刪除所有儲存的資料，確定嗎？")) {
+            assets = [];
+            renderTable();
         }
+    }
 
-        function renderList() {
-            const list = document.getElementById('itemList');
-            list.innerHTML = '';
-            data[currentTab].forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = `bg-white rounded-[32px] p-6 shadow-sm relative transition-all ${item.done ? 'card-done' : 'card-pending'}`;
-                div.innerHTML = `
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-start">
-                            <div onclick="openSearch(${index})" class="flex-1">
-                                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-1">Product Name / ID</span>
-                                <p class="font-black text-slate-800 text-md leading-tight">${item.name || '<點擊選擇品項或輸入搜尋>'}</p>
-                                <div class="flex gap-4 mt-2">
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">儲位: <b class="text-slate-800 font-black">${item.loc || '--'}</b></span>
-                                    <span class="text-[9px] font-black text-slate-400 uppercase">有效: <b class="text-indigo-600 font-black">${item.exp || '--'}</b></span>
-                                </div>
-                            </div>
-                            <button onclick="removeItem(${index})" class="text-slate-200 p-2">✕</button>
-                        </div>
+    window.onload = renderTable;
+</script>
 
-                        <div class="flex gap-3 items-end">
-                            <div class="flex-1 bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
-                                <span class="text-[9px] font-black text-emerald-600 uppercase block mb-1">PLT 板數</span>
-                                <input type="number" inputmode="decimal" value="${item.plt}" onchange="updatePlt(${index}, this.value)" class="w-full bg-transparent text-2xl font-black text-emerald-700 focus:outline-none">
-                            </div>
-                            <div class="flex-1 bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
-                                <span class="text-[9px] font-black text-indigo-600 uppercase block mb-1">BOX 總件數</span>
-                                <input type="number" inputmode="numeric" value="${item.qty}" onchange="updateQty(${index}, this.value)" class="w-full bg-transparent text-2xl font-black text-indigo-700 focus:outline-none">
-                                <p class="text-[8px] text-indigo-300 font-black mt-1">Std: ${item.qpp || 0}/plt</p>
-                            </div>
-                            <button onclick="toggleDone(${index})" class="h-16 w-16 rounded-3xl btn-tap flex flex-col items-center justify-center font-black text-[9px] shadow-sm ${item.done ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}">
-                                <span class="text-xl mb-1">${item.done ? '✅' : '❓'}</span>DONE
-                            </button>
-                        </div>
-                        ${currentTab === 'tomorrow' ? `<button onclick="moveToday(${index})" class="w-full py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-xl border border-indigo-100 uppercase tracking-widest">移至今日作業 ➔</button>` : ''}
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-            updateStats();
-        }
-
-        // --- 搜尋核心邏輯 ---
-        function openSearch(idx) {
-            activeIdx = idx;
-            document.getElementById('searchModal').classList.add('active');
-            document.getElementById('searchInput').focus();
-            filterSearch(''); // 初始化顯示
-        }
-
-        function closeSearch() {
-            document.getElementById('searchModal').classList.remove('active');
-            document.getElementById('searchInput').value = '';
-        }
-
-        function filterSearch(query) {
-            const results = document.getElementById('searchResults');
-            results.innerHTML = '';
-            const filtered = masterData.filter(m => m.name.includes(query) || m.id.includes(query));
-            
-            filtered.forEach(m => {
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left p-4 bg-slate-50 border border-slate-100 rounded-2xl active:bg-indigo-50 transition-colors";
-                btn.innerHTML = `<p class="font-black text-slate-800">${m.name}</p>
-                                 <p class="text-xs text-slate-400 font-bold uppercase mt-1">ITEM: ${m.id} | STD: ${m.qpp} / PLT</p>`;
-                btn.onclick = () => selectItem(m);
-                results.appendChild(btn);
-            });
-        }
-
-        function selectItem(m) {
-            const itm = data[currentTab][activeIdx];
-            Object.assign(itm, m, { plt: 1, qty: m.qpp, done: false });
-            renderList(); save(); closeSearch();
-        }
-
-        function useCustomName() {
-            const query = document.getElementById('searchInput').value;
-            const itm = data[currentTab][activeIdx];
-            itm.name = query || "自定義商品";
-            renderList(); save(); closeSearch();
-        }
-
-        // --- 資料異動邏輯 ---
-        function updatePlt(idx, val) {
-            const itm = data[currentTab][idx];
-            itm.plt = Number(val);
-            if (itm.qpp > 0) itm.qty = itm.plt * itm.qpp;
-            renderList(); save();
-        }
-
-        function updateQty(idx, val) { data[currentTab][idx].qty = Number(val); updateStats(); save(); }
-        function toggleDone(idx) { data[currentTab][idx].done = !data[currentTab][idx].done; renderList(); save(); }
-        function removeItem(idx) { if(confirm('確定移除品項?')) { data[currentTab].splice(idx,1); renderList(); save(); } }
-        function addItem() { data[currentTab].unshift({ name: '', loc: '', exp: '', qty: 0, plt: 1, qpp: 0, done: false }); renderList(); window.scrollTo(0,0); }
-        function moveToday(idx) { data.today.push(data.tomorrow.splice(idx,1)[0]); renderList(); save(); }
-
-        function updateStats() {
-            let q = 0, p = 0;
-            data.today.forEach(i => { q += Number(i.qty); p += Number(i.plt); });
-            document.getElementById('sumQty').innerText = q;
-            document.getElementById('sumPlt').innerText = p;
-        }
-
-        function setDamage(status) {
-            carStatus.hasDamage = status;
-            document.getElementById('btnNoDamage').className = `flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap ${!status ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-slate-100 text-slate-300'}`;
-            document.getElementById('btnHasDamage').className = `flex-1 py-4 rounded-2xl border-2 font-black text-xs btn-tap ${status ? 'border-red-500 text-red-600 bg-red-50' : 'border-slate-100 text-slate-300'}`;
-            save();
-        }
-
-        function save() {
-            localStorage.setItem('wh_v9_data', JSON.stringify(data));
-            carStatus.plate = document.getElementById('carPlate').value;
-            localStorage.setItem('wh_v9_car', JSON.stringify(carStatus));
-            document.getElementById('saveStatus').innerText = "Last Saved: " + new Date().toLocaleTimeString();
-        }
-
-        function prevImg(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    input.parentElement.style.backgroundImage = `url(${e.target.result})`;
-                    input.parentElement.style.backgroundSize = 'cover';
-                    input.parentElement.querySelector('span').style.display = 'none';
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        async function shareReport() {
-            const plate = document.getElementById('carPlate').value || '未填';
-            const msg = `【移倉離場回報 V9】\n車牌: ${plate}\n安檢: ${carStatus.hasDamage ? '⚠️外觀損壞' : '✅正常'}\n----------------\n總計: ${document.getElementById('sumQty').innerText} 箱 / ${document.getElementById('sumPlt').innerText} 板\n明日工作量: ${data.tomorrow.length} 項\n\n(簽單與車體照已存檔)`;
-            if (navigator.share) await navigator.share({ title: 'WH Report', text: msg });
-            else { navigator.clipboard.writeText(msg); alert('報表已複製！'); }
-        }
-
-        function exportCSV() {
-            let csv = "\ufeff頁籤,品名,ITEM,儲位,有效日期,板數,總箱數,完成\n";
-            ['today', 'tomorrow'].forEach(t => data[t].forEach(i => csv += `${t},${i.name},${i.id||''},${i.loc||''},${i.exp||''},${i.plt},${i.qty},${i.done}\n`));
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-            link.download = `WH_V9_${new Date().getTime()}.csv`; link.click();
-        }
-    </script>
 </body>
 </html>
